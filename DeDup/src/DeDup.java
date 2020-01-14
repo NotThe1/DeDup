@@ -12,7 +12,12 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 
 import javax.swing.Box;
 import javax.swing.DefaultListModel;
@@ -39,8 +44,8 @@ public class DeDup {
 
 	AppLogger log = AppLogger.getInstance();
 	AdapterDeDup adapterDeDup = new AdapterDeDup();
-	DefaultListModel<String> targetListModel = new DefaultListModel<String>();
-	DefaultListModel<String> skipListModel = new DefaultListModel<String>();
+	DefaultListModel<File> targetListModel = new DefaultListModel<File>();
+	DefaultListModel<File> skipListModel = new DefaultListModel<File>();
 
 	/**
 	 * Launch the application.
@@ -58,42 +63,89 @@ public class DeDup {
 		});
 	}// main
 
-	private void doAddFolder(DefaultListModel<String> listModel) {
+	private void doAddFolder(DefaultListModel<File> listModel) {
 		JFileChooser fc = new JFileChooser();
 		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		fc.setMultiSelectionEnabled(true);
 		if (fc.showDialog(frameDeDup, "pick folder(s)") == JFileChooser.APPROVE_OPTION) {
 			File[] files = fc.getSelectedFiles();
 			for (File file : files) {
-				listModel.addElement(file.getAbsolutePath());
-			} // files			
-		}//if
+				listModel.addElement(file);
+			} // files
+		} // if
 	}// doAddFolder
 
-	private void doRemoveFolder(JList<String> list) {
-		DefaultListModel<String> listModel = (DefaultListModel<String>) list.getModel();
+	private int doRemoveFolder(JList<File> list) {
+		DefaultListModel<File> listModel = (DefaultListModel<File>) list.getModel();
 		int index = list.getMaxSelectionIndex();
 		while (index != -1) {
 			listModel.remove(index);
 			index = list.getMaxSelectionIndex();
 		} // while
+		return listModel.getSize();
 	}// doAddFolder
 
-	private void doClearFolders(DefaultListModel<String> listModel, JButton button) {
+	private void doClearFolders(DefaultListModel<File> listModel, JButton button) {
 		listModel.clear();
 		button.setEnabled(false);
 	}// doAddFolder
 
-	private void searchInit() {
+	private List<Path> getNetTargets() {
+		ArrayList<PathAndCount> pacTargets = getPacTargets();
 
-	}// searchInit
+		// Order descending by the number of names in the path
+		Collections.sort(pacTargets);
+
+		// progress thru the Targets looking/setting isChild flag
+		int index = 0;
+		while (index != pacTargets.size()) {
+			PathAndCount candidate = pacTargets.get(index++);
+			for (int i = index; i < pacTargets.size(); i++) {
+				candidate.testIsChild(pacTargets.get(i));
+			} // for
+		} // while
+
+		return pacTargets.stream().filter(s -> s.isChild() == false).map(s -> s.path).collect(Collectors.toList());
+	}// getNetTargets
+
+	// create and load array with contents of targetList
+	private ArrayList<PathAndCount> getPacTargets() {
+		ArrayList<PathAndCount> pacTargets = new ArrayList<PathAndCount>();
+		for (int i = 0; i < targetListModel.getSize(); i++) {
+			pacTargets.add(i, new PathAndCount(targetListModel.getElementAt(i).toPath()));
+		} // for
+		return pacTargets;
+	}// getPacTargets
+
+	private List<Path> getNetSkip() {
+		// create and load array with contents of skipList
+		ArrayList<PathAndCount> pacSkips = new ArrayList<PathAndCount>();
+		for (int i = 0; i < skipListModel.getSize(); i++) {
+			pacSkips.add(i, new PathAndCount(skipListModel.getElementAt(i).toPath()));
+		} // for
+
+		// progress thru the Skips looking for children in Targets
+		ArrayList<PathAndCount> pacTargets = getPacTargets();
+
+		int targetCount = pacTargets.size();
+		for (PathAndCount pacSkip : pacSkips) {
+			for (int i = 0; i < targetCount; i++) {
+				pacSkip.testIsChild(pacTargets.get(i));
+			} // for
+		} // for each
+
+		for (PathAndCount pacSkip : pacSkips) {
+			log.infof("Skips %s, %s%n", pacSkip.isChild, pacSkip.toString());
+		} // for
+
+		return pacSkips.stream().filter(s -> s.isChild() == true).map(s -> s.path).collect(Collectors.toList());
+	}// getNetSkip
 
 	/**
 	 * Create the application.
 	 */
 	public Preferences getPreferences() {
 		return Preferences.userNodeForPackage(DeDup.class).node(this.getClass().getSimpleName());
-
 	}// getPreferences
 
 	public void appClose() {
@@ -191,13 +243,73 @@ public class DeDup {
 		gbc_verticalStrut.gridx = 0;
 		gbc_verticalStrut.gridy = 0;
 		panelTop.add(verticalStrut, gbc_verticalStrut);
-		
+
 		JButton btnTest = new JButton("test");
 		btnTest.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				/* Targets */
+				// create and load array with contents of targetList
+				ArrayList<PathAndCount> pacTargets = new ArrayList<PathAndCount>();
+				for (int i = 0; i < targetListModel.getSize(); i++) {
+					pacTargets.add(i, new PathAndCount(targetListModel.getElementAt(i).toPath()));
+				} // for
 
-				
-			}//actionPerformed
+				// Order descending by the number of names in the path
+				Collections.sort(pacTargets);
+
+				// progress thru the Targets looking/setting isChild flag
+				int index = 0;
+				while (index != pacTargets.size()) {
+					PathAndCount candidate = pacTargets.get(index++);
+					for (int i = index; i < pacTargets.size(); i++) {
+						candidate.testIsChild(pacTargets.get(i));
+					} // for
+				} // while
+
+				for (PathAndCount pac : pacTargets) {
+					log.infof("%s, %s%n", pac.isChild(), pac.toString());
+				} // for
+
+				// List<PathAndCount> targetNet =
+				// pacTargets.stream().filter(s->s.isChild()==false).collect(Collectors.toList());
+				List<Path> targetNet = pacTargets.stream().filter(s -> s.isChild() == false).map(s -> s.path)
+						.collect(Collectors.toList());
+
+				/* Skip */
+				// create and load array with contents of skipList
+				ArrayList<PathAndCount> pacSkips = new ArrayList<PathAndCount>();
+				for (int i = 0; i < skipListModel.getSize(); i++) {
+					pacSkips.add(i, new PathAndCount(skipListModel.getElementAt(i).toPath()));
+				} // for
+
+				// progress thru the Skips looking for children in Targets
+				int targetCount = pacTargets.size();
+				for (PathAndCount pacSkip : pacSkips) {
+					for (int i = 0; i < targetCount; i++) {
+						pacSkip.testIsChild(pacTargets.get(i));
+					} // for
+				} // for each
+
+				for (PathAndCount pacSkip : pacSkips) {
+					log.infof("Skips %s, %s%n", pacSkip.isChild, pacSkip.toString());
+				} // for
+
+				List<Path> skipNet = pacSkips.stream().filter(s -> s.isChild() == true).map(s -> s.path)
+						.collect(Collectors.toList());
+
+				log.addNL(2);
+				log.info("TargetNet");
+				for (Path path : targetNet) {
+					log.infof(" %s%n", path.toString());
+				} // for
+
+				log.addNL(1);
+				log.info("SkipNet");
+				for (Path path : skipNet) {
+					log.infof(" %s%n", path.toString());
+				} // for
+
+			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest = new GridBagConstraints();
 		gbc_btnTest.anchor = GridBagConstraints.NORTH;
@@ -312,7 +424,7 @@ public class DeDup {
 		gbc_scrollPaneTargets.gridy = 0;
 		panelTargets.add(scrollPaneTargets, gbc_scrollPaneTargets);
 
-		listTargets = new JList<String>();
+		listTargets = new JList<File>();
 		listTargets.addListSelectionListener(adapterDeDup);
 		listTargets.setName(LIST_TARGETS);
 		scrollPaneTargets.setViewportView(listTargets);
@@ -399,7 +511,7 @@ public class DeDup {
 		gbc_scrollPaneSkip.gridy = 0;
 		panelSkip.add(scrollPaneSkip, gbc_scrollPaneSkip);
 
-		listSkip = new JList<String>();
+		listSkip = new JList<File>();
 		listSkip.addListSelectionListener(adapterDeDup);
 		listSkip.setName(LIST_SKIP);
 		scrollPaneSkip.setViewportView(listSkip);
@@ -440,6 +552,39 @@ public class DeDup {
 		frameDeDup.setJMenuBar(menuBar);
 	}// initialize
 
+	class PathAndCount implements Comparable<PathAndCount> {
+
+		public Path path;
+		public boolean isChild = false;
+
+		public PathAndCount(Path path) {
+			this.path = path;
+		}// Constructor
+
+		public String toString() {
+			return path.toString();
+		}// toString
+
+		public int getCount() {
+			return path.getNameCount();
+		}// getCount
+
+		public boolean testIsChild(PathAndCount pac) {
+			this.isChild = this.isChild | this.path.startsWith(pac.path);
+			return this.isChild;
+		}// testIsChild
+
+		public boolean isChild() {
+			return this.isChild;
+		}// isChild
+
+		@Override // Descending sort
+		public int compareTo(PathAndCount PandC) {
+			return PandC.getCount() - this.getCount();
+		}// compareTo Collections.sort(list)
+
+	}// class PathAndCount
+
 	class AdapterDeDup implements ActionListener, ListSelectionListener {
 
 		/* ActionListener */
@@ -451,7 +596,10 @@ public class DeDup {
 				break;
 			case BTN_TARGET_REMOVE:
 				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
-				doRemoveFolder(listTargets);
+				if (doRemoveFolder(listTargets) == 0) {
+					btnTargetRemove.setEnabled(false);
+				} // if
+				;
 				break;
 			case BTN_TARGET_CLEAR:
 				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
@@ -462,7 +610,10 @@ public class DeDup {
 				break;
 			case BTN_SKIP_REMOVE:
 				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
-				doRemoveFolder(listSkip);
+				if (doRemoveFolder(listSkip) == 0) {
+					btnSkipRemove.setEnabled(false);
+				} // if
+				;
 				break;
 			case BTN_SKIP_CLEAR:
 				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
@@ -478,15 +629,15 @@ public class DeDup {
 		@Override
 		public void valueChanged(ListSelectionEvent listSelectionEvent) {
 			if (listSelectionEvent.getValueIsAdjusting() == false) {
-				// listSelectionEvent.
 				@SuppressWarnings("unchecked")
 				JList<String> list = (JList<String>) listSelectionEvent.getSource();
+
 				switch (list.getName()) {
 				case LIST_TARGETS:
-					btnTargetRemove.setEnabled(true);
+					btnTargetRemove.setEnabled(!list.isSelectionEmpty());
 					break;
 				case LIST_SKIP:
-					btnSkipRemove.setEnabled(true);
+					btnSkipRemove.setEnabled(!list.isSelectionEmpty());
 					break;
 				default:
 					log.warnf("[valueChanged] switch at default: name = %s%n", list.getName());
@@ -499,8 +650,8 @@ public class DeDup {
 	private JFrame frameDeDup;
 	private JTextPane textLog;
 	private JSplitPane splitPaneTargets;
-	private JList<String> listTargets;
-	private JList<String> listSkip;
+	private JList<File> listTargets;
+	private JList<File> listSkip;
 
 	private final static String BTN_TARGET_ADD = "btnTargetAdd";
 	private final static String BTN_TARGET_REMOVE = "btnTargetRemove";
