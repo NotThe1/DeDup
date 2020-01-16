@@ -12,7 +12,12 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FilenameFilter;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,8 +25,10 @@ import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
 import javax.swing.Box;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -47,6 +54,7 @@ public class DeDup {
 	DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	DefaultListModel<File> skipListModel = new DefaultListModel<File>();
 
+	DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>(); 
 	/**
 	 * Launch the application.
 	 */
@@ -62,6 +70,19 @@ public class DeDup {
 			}// run
 		});
 	}// main
+	
+	private void loadTypeFiles() {
+		File[] files = getTypeFiles();
+		
+		modelTypeFiles.removeAllElements();
+		String element = "";
+		for(File file : files) {
+			element = file.getName().replace(TYPEFILE, EMPTY_STRING);
+			modelTypeFiles.addElement(element);
+		}//for each file
+	}//loadTypeFiles
+	
+
 
 	private void doAddFolder(DefaultListModel<File> listModel) {
 		JFileChooser fc = new JFileChooser();
@@ -134,16 +155,49 @@ public class DeDup {
 			} // for
 		} // for each
 
-		for (PathAndCount pacSkip : pacSkips) {
-			log.infof("Skips %s, %s%n", pacSkip.isChild, pacSkip.toString());
-		} // for
-
 		return pacSkips.stream().filter(s -> s.isChild() == true).map(s -> s.path).collect(Collectors.toList());
 	}// getNetSkip
+	
+	private String getAppDataDirectory() {
+		String folder = System.getProperty("java.io.tmpdir");
+		return folder.replace("Temp","DeDup");
+	}//getAppDataDirectory
 
 	/**
 	 * Create the application.
 	 */
+	private File[] getTypeFiles() {
+		String appDataDirectory = getAppDataDirectory();
+		File appDirectory = new File(appDataDirectory);
+		
+		if (!Files.exists(appDirectory.toPath())) {
+			log.infof("appDataDirectory: %s does not exits, creatining it%n", appDataDirectory);
+			try {
+				Files.createDirectories(appDirectory.toPath());
+			} catch (Exception e) {
+				log.errorf("Failed to create appDataDirectory: %s%n", appDataDirectory);
+			} //try
+		}//if exists
+				
+		File[] files = appDirectory.listFiles(new ListFilter(TYPEFILE));
+		
+		if(files == null | files.length == 0) {
+			for(String file:INITIAL_LISTFILES) {
+				try {
+					InputStream inStream = this.getClass().getResourceAsStream(file);
+					Path targetPath = Paths.get(appDataDirectory,file);
+					Files.copy(inStream, targetPath,StandardCopyOption.REPLACE_EXISTING);
+				} catch (Exception e) {
+					log.errorf("[initializeTypeFiles] file %s %n   %s%n", file, e.getMessage());
+				} //try
+			}//for each file
+			files = appDirectory.listFiles(new ListFilter(TYPEFILE));
+		}//if need to initialize
+		return files;
+	}//initializeTypeFiles
+	
+	
+	
 	public Preferences getPreferences() {
 		return Preferences.userNodeForPackage(DeDup.class).node(this.getClass().getSimpleName());
 	}// getPreferences
@@ -157,6 +211,9 @@ public class DeDup {
 		myPrefs.putInt("LocX", point.x);
 		myPrefs.putInt("LocY", point.y);
 		myPrefs.putInt("splitPaneTargets.divederLoc", splitPaneTargets.getDividerLocation());
+		
+		myPrefs.put("TypeFile", (String) modelTypeFiles.getSelectedItem());
+		
 		myPrefs = null;
 	}// appClose
 
@@ -168,10 +225,15 @@ public class DeDup {
 		log.infof("Starting DeDup  ", "");
 		log.addTimeStamp();
 
+		loadTypeFiles();
+		
 		Preferences myPrefs = getPreferences();
 		frameDeDup.setSize(myPrefs.getInt("Width", 761), myPrefs.getInt("Height", 693));
 		frameDeDup.setLocation(myPrefs.getInt("LocX", 100), myPrefs.getInt("LocY", 100));
 		splitPaneTargets.setDividerLocation(myPrefs.getInt("splitPaneTargets.divederLoc", 150));
+
+		modelTypeFiles.setSelectedItem(myPrefs.get("TypeFile", "Pictures"));
+		
 		myPrefs = null;
 
 		listTargets.setModel(targetListModel);
@@ -179,6 +241,7 @@ public class DeDup {
 
 		btnTargetRemove.setEnabled(false);
 		btnSkipRemove.setEnabled(false);
+		
 
 	}// appInit
 
@@ -247,62 +310,15 @@ public class DeDup {
 		JButton btnTest = new JButton("test");
 		btnTest.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				/* Targets */
-				// create and load array with contents of targetList
-				ArrayList<PathAndCount> pacTargets = new ArrayList<PathAndCount>();
-				for (int i = 0; i < targetListModel.getSize(); i++) {
-					pacTargets.add(i, new PathAndCount(targetListModel.getElementAt(i).toPath()));
-				} // for
 
-				// Order descending by the number of names in the path
-				Collections.sort(pacTargets);
-
-				// progress thru the Targets looking/setting isChild flag
-				int index = 0;
-				while (index != pacTargets.size()) {
-					PathAndCount candidate = pacTargets.get(index++);
-					for (int i = index; i < pacTargets.size(); i++) {
-						candidate.testIsChild(pacTargets.get(i));
-					} // for
-				} // while
-
-				for (PathAndCount pac : pacTargets) {
-					log.infof("%s, %s%n", pac.isChild(), pac.toString());
-				} // for
-
-				// List<PathAndCount> targetNet =
-				// pacTargets.stream().filter(s->s.isChild()==false).collect(Collectors.toList());
-				List<Path> targetNet = pacTargets.stream().filter(s -> s.isChild() == false).map(s -> s.path)
-						.collect(Collectors.toList());
-
-				/* Skip */
-				// create and load array with contents of skipList
-				ArrayList<PathAndCount> pacSkips = new ArrayList<PathAndCount>();
-				for (int i = 0; i < skipListModel.getSize(); i++) {
-					pacSkips.add(i, new PathAndCount(skipListModel.getElementAt(i).toPath()));
-				} // for
-
-				// progress thru the Skips looking for children in Targets
-				int targetCount = pacTargets.size();
-				for (PathAndCount pacSkip : pacSkips) {
-					for (int i = 0; i < targetCount; i++) {
-						pacSkip.testIsChild(pacTargets.get(i));
-					} // for
-				} // for each
-
-				for (PathAndCount pacSkip : pacSkips) {
-					log.infof("Skips %s, %s%n", pacSkip.isChild, pacSkip.toString());
-				} // for
-
-				List<Path> skipNet = pacSkips.stream().filter(s -> s.isChild() == true).map(s -> s.path)
-						.collect(Collectors.toList());
-
+				List<Path> targetNet = getNetTargets();
 				log.addNL(2);
 				log.info("TargetNet");
 				for (Path path : targetNet) {
 					log.infof(" %s%n", path.toString());
 				} // for
 
+				List<Path> skipNet = getNetSkip();
 				log.addNL(1);
 				log.info("SkipNet");
 				for (Path path : skipNet) {
@@ -346,17 +362,18 @@ public class DeDup {
 		splitPaneTargets.setLeftComponent(panelTargets);
 		GridBagLayout gbl_panelTargets = new GridBagLayout();
 		gbl_panelTargets.columnWidths = new int[] { 0, 0, 0 };
-		gbl_panelTargets.rowHeights = new int[] { 0, 0 };
+		gbl_panelTargets.rowHeights = new int[] { 0, 0, 0 };
 		gbl_panelTargets.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
-		gbl_panelTargets.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelTargets.rowWeights = new double[] { 1.0, 0.0, Double.MIN_VALUE };
 		panelTargets.setLayout(gbl_panelTargets);
 
 		JPanel panelTargets1 = new JPanel();
 		panelTargets1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Folders to Search",
 				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
 		GridBagConstraints gbc_panelTargets1 = new GridBagConstraints();
-		gbc_panelTargets1.insets = new Insets(0, 0, 0, 5);
-		gbc_panelTargets1.fill = GridBagConstraints.BOTH;
+		gbc_panelTargets1.anchor = GridBagConstraints.NORTH;
+		gbc_panelTargets1.insets = new Insets(0, 0, 5, 5);
+		gbc_panelTargets1.fill = GridBagConstraints.HORIZONTAL;
 		gbc_panelTargets1.gridx = 0;
 		gbc_panelTargets1.gridy = 0;
 		panelTargets.add(panelTargets1, gbc_panelTargets1);
@@ -419,6 +436,8 @@ public class DeDup {
 
 		JScrollPane scrollPaneTargets = new JScrollPane();
 		GridBagConstraints gbc_scrollPaneTargets = new GridBagConstraints();
+		gbc_scrollPaneTargets.gridheight = 2;
+		gbc_scrollPaneTargets.insets = new Insets(0, 0, 5, 0);
 		gbc_scrollPaneTargets.fill = GridBagConstraints.BOTH;
 		gbc_scrollPaneTargets.gridx = 1;
 		gbc_scrollPaneTargets.gridy = 0;
@@ -428,6 +447,43 @@ public class DeDup {
 		listTargets.addListSelectionListener(adapterDeDup);
 		listTargets.setName(LIST_TARGETS);
 		scrollPaneTargets.setViewportView(listTargets);
+		
+		JPanel panel_1 = new JPanel();
+		panel_1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Type Lists", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
+		GridBagConstraints gbc_panel_1 = new GridBagConstraints();
+		gbc_panel_1.insets = new Insets(0, 0, 0, 5);
+		gbc_panel_1.fill = GridBagConstraints.BOTH;
+		gbc_panel_1.gridx = 0;
+		gbc_panel_1.gridy = 1;
+		panelTargets.add(panel_1, gbc_panel_1);
+		GridBagLayout gbl_panel_1 = new GridBagLayout();
+		gbl_panel_1.columnWidths = new int[]{0, 0};
+		gbl_panel_1.rowHeights = new int[]{0, 0, 0, 0};
+		gbl_panel_1.columnWeights = new double[]{1.0, Double.MIN_VALUE};
+		gbl_panel_1.rowWeights = new double[]{0.0, 0.0, 0.0, Double.MIN_VALUE};
+		panel_1.setLayout(gbl_panel_1);
+		
+		cbTypeFiles = new JComboBox(modelTypeFiles);
+		GridBagConstraints gbc_cbTypeFiles = new GridBagConstraints();
+		gbc_cbTypeFiles.insets = new Insets(0, 0, 5, 0);
+		gbc_cbTypeFiles.fill = GridBagConstraints.HORIZONTAL;
+		gbc_cbTypeFiles.gridx = 0;
+		gbc_cbTypeFiles.gridy = 0;
+		panel_1.add(cbTypeFiles, gbc_cbTypeFiles);
+		
+		Component verticalStrut_6 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_6 = new GridBagConstraints();
+		gbc_verticalStrut_6.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_6.gridx = 0;
+		gbc_verticalStrut_6.gridy = 1;
+		panel_1.add(verticalStrut_6, gbc_verticalStrut_6);
+		
+		JButton btnEditTypeFiles = new JButton("Edit");
+		GridBagConstraints gbc_btnEditTypeFiles = new GridBagConstraints();
+		gbc_btnEditTypeFiles.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnEditTypeFiles.gridx = 0;
+		gbc_btnEditTypeFiles.gridy = 2;
+		panel_1.add(btnEditTypeFiles, gbc_btnEditTypeFiles);
 
 		JPanel panelSkip = new JPanel();
 		splitPaneTargets.setRightComponent(panelSkip);
@@ -551,6 +607,28 @@ public class DeDup {
 		JMenuBar menuBar = new JMenuBar();
 		frameDeDup.setJMenuBar(menuBar);
 	}// initialize
+	
+	// ---------------------------------------------------------
+	// ---------------------------------------------------------
+
+	static class ListFilter implements FilenameFilter {
+		String suffix;
+
+		public ListFilter(String suffix) {
+			this.suffix = suffix;
+		}// Constructor
+
+		@Override
+		public boolean accept(File arg0, String arg1) {
+			if (arg1.endsWith(this.suffix)) {
+				return true;
+			} // if
+			return false;
+		}// accept
+	}// ListFilter
+
+	// ---------------------------------------------------------
+
 
 	class PathAndCount implements Comparable<PathAndCount> {
 
@@ -585,6 +663,9 @@ public class DeDup {
 
 	}// class PathAndCount
 
+	// ---------------------------------------------------------
+
+	
 	class AdapterDeDup implements ActionListener, ListSelectionListener {
 
 		/* ActionListener */
@@ -647,11 +728,16 @@ public class DeDup {
 
 	}// class adapterDeDup
 
+	// ---------------------------------------------------------
+
 	private JFrame frameDeDup;
 	private JTextPane textLog;
 	private JSplitPane splitPaneTargets;
 	private JList<File> listTargets;
 	private JList<File> listSkip;
+	private JButton btnTargetRemove;
+	private JButton btnSkipRemove;
+	private JComboBox cbTypeFiles;
 
 	private final static String BTN_TARGET_ADD = "btnTargetAdd";
 	private final static String BTN_TARGET_REMOVE = "btnTargetRemove";
@@ -660,9 +746,20 @@ public class DeDup {
 	private final static String BTN_SKIP_REMOVE = "btnSkipRemove";
 	private final static String BTN_SKIP_CLEAR = "btnSkipClear";
 
+	private final static String EMPTY_STRING = "";
+	
 	private final static String LIST_TARGETS = "listTargets";
 	private final static String LIST_SKIP = "listSkip";
-	private JButton btnTargetRemove;
-	private JButton btnSkipRemove;
+	
+	private final static String TYPEFILE = ".typeFile";
+	private final static String PATH_SEPARATOR = File.separator;
+	/* @formatter:off */
+	private static final String[] INITIAL_LISTFILES = new String[] {
+			"VB" + TYPEFILE,			
+			"Music" + TYPEFILE,
+			"MusicAndPictures" + TYPEFILE,
+			"Pictures" + TYPEFILE };
+
+	/* @formatter:on  */
 
 }// class DeDup
