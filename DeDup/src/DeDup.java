@@ -9,6 +9,8 @@ import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -49,12 +51,14 @@ import javax.swing.text.StyledDocument;
 
 public class DeDup {
 
-	AppLogger log = AppLogger.getInstance();
-	AdapterDeDup adapterDeDup = new AdapterDeDup();
-	DefaultListModel<File> targetListModel = new DefaultListModel<File>();
-	DefaultListModel<File> skipListModel = new DefaultListModel<File>();
+	private AppLogger log = AppLogger.getInstance();
+	private AdapterDeDup adapterDeDup = new AdapterDeDup();
+	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
+	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
 
-	DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>(); 
+	private DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>();
+	private String targetTypesRegex;
+
 	/**
 	 * Launch the application.
 	 */
@@ -70,19 +74,6 @@ public class DeDup {
 			}// run
 		});
 	}// main
-	
-	private void loadTypeFiles() {
-		File[] files = getTypeFiles();
-		
-		modelTypeFiles.removeAllElements();
-		String element = "";
-		for(File file : files) {
-			element = file.getName().replace(TYPEFILE, EMPTY_STRING);
-			modelTypeFiles.addElement(element);
-		}//for each file
-	}//loadTypeFiles
-	
-
 
 	private void doAddFolder(DefaultListModel<File> listModel) {
 		JFileChooser fc = new JFileChooser();
@@ -157,47 +148,91 @@ public class DeDup {
 
 		return pacSkips.stream().filter(s -> s.isChild() == true).map(s -> s.path).collect(Collectors.toList());
 	}// getNetSkip
-	
-	private String getAppDataDirectory() {
-		String folder = System.getProperty("java.io.tmpdir");
-		return folder.replace("Temp","DeDup");
-	}//getAppDataDirectory
 
-	/**
-	 * Create the application.
-	 */
-	private File[] getTypeFiles() {
+	public String getAppDataDirectory() {
+		String folder = System.getProperty("java.io.tmpdir");
+		return folder.replace("Temp", "DeDup");
+	}// getAppDataDirectory
+
+	private void loadTargetRegex() {
+		String activeTypeFile = (String) modelTypeFiles.getSelectedItem();
+		String typeFile = getAppDataDirectory() + (String) modelTypeFiles.getSelectedItem() + TYPEFILE;
+		lblActiveTypeFile.setText(activeTypeFile);
+
+		try {
+			ArrayList<String> targetSuffixes = (ArrayList) Files.readAllLines(Paths.get(typeFile));
+			StringBuilder sb = new StringBuilder("(?)"); // case insensitive
+			for (String targetSuffix : targetSuffixes) {
+				targetSuffix.trim();
+				sb.append(targetSuffix);
+				sb.append("|");
+			} // for each file type
+			sb.deleteCharAt(sb.length() - 1); // remove trailing "|"
+
+			targetTypesRegex = sb.toString();
+		} catch (Exception e) {
+			lblActiveTypeFile.setText("Failed to load target types");
+			log.infof("Failed to read type file : %s%n", typeFile);
+		} // try
+
+	}// loadTargetRegex
+
+	private void doEditTypeFiles() {
+		String activeList = (String) modelTypeFiles.getSelectedItem();
+		TypeFileMaintenance tfm = new TypeFileMaintenance(frameDeDup,this);
+		tfm.setLocationRelativeTo(frameDeDup);
+		tfm.setVisible(true);
+		loadTypeFiles(modelTypeFiles);
+		if (modelTypeFiles.getIndexOf(activeList)!= -1) {
+			modelTypeFiles.setSelectedItem(activeList);
+		}//if
+	}//doEditTypeFiles
+	
+	public void loadTypeFiles(DefaultComboBoxModel<String> model) {
+		File[] files = getTypeFiles();
+
+		model.removeAllElements();
+		String element = "";
+		for (File file : files) {
+			element = file.getName().replace(TYPEFILE, EMPTY_STRING);
+			model.addElement(element);
+		} // for each file
+	}// loadTypeFiles
+
+	public File[] getTypeFiles() {
 		String appDataDirectory = getAppDataDirectory();
 		File appDirectory = new File(appDataDirectory);
-		
+
 		if (!Files.exists(appDirectory.toPath())) {
 			log.infof("appDataDirectory: %s does not exits, creatining it%n", appDataDirectory);
 			try {
 				Files.createDirectories(appDirectory.toPath());
 			} catch (Exception e) {
 				log.errorf("Failed to create appDataDirectory: %s%n", appDataDirectory);
-			} //try
-		}//if exists
-				
+			} // try
+		} // if exists
+
 		File[] files = appDirectory.listFiles(new ListFilter(TYPEFILE));
-		
-		if(files == null | files.length == 0) {
-			for(String file:INITIAL_LISTFILES) {
+
+		if (files == null | files.length == 0) {
+			for (String file : INITIAL_LISTFILES) {
 				try {
 					InputStream inStream = this.getClass().getResourceAsStream(file);
-					Path targetPath = Paths.get(appDataDirectory,file);
-					Files.copy(inStream, targetPath,StandardCopyOption.REPLACE_EXISTING);
+					Path targetPath = Paths.get(appDataDirectory, file);
+					Files.copy(inStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
 				} catch (Exception e) {
 					log.errorf("[initializeTypeFiles] file %s %n   %s%n", file, e.getMessage());
-				} //try
-			}//for each file
+				} // try
+			} // for each file
 			files = appDirectory.listFiles(new ListFilter(TYPEFILE));
-		}//if need to initialize
+		} // if need to initialize
 		return files;
-	}//initializeTypeFiles
-	
-	
-	
+	}// initializeTypeFiles
+
+	/**
+	 * Create the application.
+	 */
+
 	public Preferences getPreferences() {
 		return Preferences.userNodeForPackage(DeDup.class).node(this.getClass().getSimpleName());
 	}// getPreferences
@@ -211,9 +246,9 @@ public class DeDup {
 		myPrefs.putInt("LocX", point.x);
 		myPrefs.putInt("LocY", point.y);
 		myPrefs.putInt("splitPaneTargets.divederLoc", splitPaneTargets.getDividerLocation());
-		
+
 		myPrefs.put("TypeFile", (String) modelTypeFiles.getSelectedItem());
-		
+
 		myPrefs = null;
 	}// appClose
 
@@ -225,23 +260,25 @@ public class DeDup {
 		log.infof("Starting DeDup  ", "");
 		log.addTimeStamp();
 
-		loadTypeFiles();
-		
+		loadTypeFiles(modelTypeFiles);
+		cbTypeFiles.addItemListener(adapterDeDup);
+
 		Preferences myPrefs = getPreferences();
 		frameDeDup.setSize(myPrefs.getInt("Width", 761), myPrefs.getInt("Height", 693));
 		frameDeDup.setLocation(myPrefs.getInt("LocX", 100), myPrefs.getInt("LocY", 100));
 		splitPaneTargets.setDividerLocation(myPrefs.getInt("splitPaneTargets.divederLoc", 150));
 
 		modelTypeFiles.setSelectedItem(myPrefs.get("TypeFile", "Pictures"));
-		
+
 		myPrefs = null;
+
+		loadTargetRegex();
 
 		listTargets.setModel(targetListModel);
 		listSkip.setModel(skipListModel);
 
 		btnTargetRemove.setEnabled(false);
 		btnSkipRemove.setEnabled(false);
-		
 
 	}// appInit
 
@@ -255,6 +292,8 @@ public class DeDup {
 	 */
 	private void initialize() {
 		frameDeDup = new JFrame();
+		
+		
 		frameDeDup.setTitle("DeDup -   version 0.0");
 
 		frameDeDup.setBounds(100, 100, 450, 300);
@@ -447,9 +486,10 @@ public class DeDup {
 		listTargets.addListSelectionListener(adapterDeDup);
 		listTargets.setName(LIST_TARGETS);
 		scrollPaneTargets.setViewportView(listTargets);
-		
+
 		JPanel panel_1 = new JPanel();
-		panel_1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Type Lists", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
+		panel_1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Type Lists",
+				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
 		GridBagConstraints gbc_panel_1 = new GridBagConstraints();
 		gbc_panel_1.insets = new Insets(0, 0, 0, 5);
 		gbc_panel_1.fill = GridBagConstraints.BOTH;
@@ -457,28 +497,32 @@ public class DeDup {
 		gbc_panel_1.gridy = 1;
 		panelTargets.add(panel_1, gbc_panel_1);
 		GridBagLayout gbl_panel_1 = new GridBagLayout();
-		gbl_panel_1.columnWidths = new int[]{0, 0};
-		gbl_panel_1.rowHeights = new int[]{0, 0, 0, 0};
-		gbl_panel_1.columnWeights = new double[]{1.0, Double.MIN_VALUE};
-		gbl_panel_1.rowWeights = new double[]{0.0, 0.0, 0.0, Double.MIN_VALUE};
+		gbl_panel_1.columnWidths = new int[] { 0, 0 };
+		gbl_panel_1.rowHeights = new int[] { 0, 0, 0, 0 };
+		gbl_panel_1.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panel_1.setLayout(gbl_panel_1);
-		
-		cbTypeFiles = new JComboBox(modelTypeFiles);
+
+		cbTypeFiles = new JComboBox<String>(modelTypeFiles);
+		cbTypeFiles.setActionCommand(CB_TYPE_FILE);
+		// cbTypeFiles.addItemListener(adapterDeDup);
 		GridBagConstraints gbc_cbTypeFiles = new GridBagConstraints();
 		gbc_cbTypeFiles.insets = new Insets(0, 0, 5, 0);
 		gbc_cbTypeFiles.fill = GridBagConstraints.HORIZONTAL;
 		gbc_cbTypeFiles.gridx = 0;
 		gbc_cbTypeFiles.gridy = 0;
 		panel_1.add(cbTypeFiles, gbc_cbTypeFiles);
-		
+
 		Component verticalStrut_6 = Box.createVerticalStrut(20);
 		GridBagConstraints gbc_verticalStrut_6 = new GridBagConstraints();
 		gbc_verticalStrut_6.insets = new Insets(0, 0, 5, 0);
 		gbc_verticalStrut_6.gridx = 0;
 		gbc_verticalStrut_6.gridy = 1;
 		panel_1.add(verticalStrut_6, gbc_verticalStrut_6);
-		
+
 		JButton btnEditTypeFiles = new JButton("Edit");
+		btnEditTypeFiles.addActionListener(adapterDeDup);
+		btnEditTypeFiles.setActionCommand(BTN_EDIT_TYPEFILES);
 		GridBagConstraints gbc_btnEditTypeFiles = new GridBagConstraints();
 		gbc_btnEditTypeFiles.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnEditTypeFiles.gridx = 0;
@@ -592,22 +636,33 @@ public class DeDup {
 		gbc_panelStatus.gridy = 2;
 		panel.add(panelStatus, gbc_panelStatus);
 		GridBagLayout gbl_panelStatus = new GridBagLayout();
-		gbl_panelStatus.columnWidths = new int[] { 0, 0 };
+		gbl_panelStatus.columnWidths = new int[] { 0, 0, 0 };
 		gbl_panelStatus.rowHeights = new int[] { 0, 0 };
-		gbl_panelStatus.columnWeights = new double[] { 0.0, Double.MIN_VALUE };
+		gbl_panelStatus.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
 		gbl_panelStatus.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		panelStatus.setLayout(gbl_panelStatus);
 
 		Component verticalStrut_1 = Box.createVerticalStrut(20);
 		GridBagConstraints gbc_verticalStrut_1 = new GridBagConstraints();
+		gbc_verticalStrut_1.insets = new Insets(0, 0, 0, 5);
 		gbc_verticalStrut_1.gridx = 0;
 		gbc_verticalStrut_1.gridy = 0;
 		panelStatus.add(verticalStrut_1, gbc_verticalStrut_1);
 
+		lblActiveTypeFile = new JLabel("New label");
+		lblActiveTypeFile.setForeground(Color.BLUE);
+		lblActiveTypeFile.setFont(new Font("Times New Roman", Font.BOLD, 18));
+		lblActiveTypeFile.setHorizontalAlignment(SwingConstants.CENTER);
+		GridBagConstraints gbc_lblActiveTypeFile = new GridBagConstraints();
+		gbc_lblActiveTypeFile.fill = GridBagConstraints.HORIZONTAL;
+		gbc_lblActiveTypeFile.gridx = 1;
+		gbc_lblActiveTypeFile.gridy = 0;
+		panelStatus.add(lblActiveTypeFile, gbc_lblActiveTypeFile);
+
 		JMenuBar menuBar = new JMenuBar();
 		frameDeDup.setJMenuBar(menuBar);
 	}// initialize
-	
+
 	// ---------------------------------------------------------
 	// ---------------------------------------------------------
 
@@ -628,7 +683,6 @@ public class DeDup {
 	}// ListFilter
 
 	// ---------------------------------------------------------
-
 
 	class PathAndCount implements Comparable<PathAndCount> {
 
@@ -665,43 +719,43 @@ public class DeDup {
 
 	// ---------------------------------------------------------
 
-	
-	class AdapterDeDup implements ActionListener, ListSelectionListener {
+	class AdapterDeDup implements ActionListener, ListSelectionListener, ItemListener {
 
 		/* ActionListener */
 		@Override
-		public void actionPerformed(ActionEvent ActionEvent) {
-			switch (ActionEvent.getActionCommand()) {
+		public void actionPerformed(ActionEvent actionEvent) {
+			switch (actionEvent.getActionCommand()) {
 			case BTN_TARGET_ADD:
 				doAddFolder(targetListModel);
 				break;
 			case BTN_TARGET_REMOVE:
-				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
+				log.infof("Action Command = %s%n", actionEvent.getActionCommand());
 				if (doRemoveFolder(listTargets) == 0) {
 					btnTargetRemove.setEnabled(false);
 				} // if
-				;
 				break;
 			case BTN_TARGET_CLEAR:
-				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
+				log.infof("Action Command = %s%n", actionEvent.getActionCommand());
 				doClearFolders(targetListModel, btnTargetRemove);
 				break;
 			case BTN_SKIP_ADD:
 				doAddFolder(skipListModel);
 				break;
 			case BTN_SKIP_REMOVE:
-				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
+				log.infof("Action Command = %s%n", actionEvent.getActionCommand());
 				if (doRemoveFolder(listSkip) == 0) {
 					btnSkipRemove.setEnabled(false);
 				} // if
-				;
 				break;
 			case BTN_SKIP_CLEAR:
-				log.infof("Action Command = %s%n", ActionEvent.getActionCommand());
+				log.infof("Action Command = %s%n", actionEvent.getActionCommand());
 				doClearFolders(skipListModel, btnSkipRemove);
 				break;
+			case BTN_EDIT_TYPEFILES:
+				doEditTypeFiles();
+				break;
 			default:
-				log.warnf("[actionPerformed] switch at default: Action Command = %s%n", ActionEvent.getActionCommand());
+				log.warnf("[actionPerformed] switch at default: Action Command = %s%n", actionEvent.getActionCommand());
 			}// switch action Command
 		}// actionPerformed
 
@@ -726,6 +780,23 @@ public class DeDup {
 			} // if adjusting
 		}// valueChanged
 
+		/* ItemListener */
+
+		@Override
+		public void itemStateChanged(ItemEvent itemEvent) {
+			String actionCommand = ((JComboBox) itemEvent.getSource()).getActionCommand();
+			switch (actionCommand) {
+			case CB_TYPE_FILE:
+				if (itemEvent.getStateChange() == ItemEvent.SELECTED) {
+					loadTargetRegex();
+				} // if
+				break;
+			default:
+				log.warnf("[itemStateChanged] switch at default: actionCommand = %s%n", actionCommand);
+			}// switch
+
+		}// itemStateChanged
+
 	}// class adapterDeDup
 
 	// ---------------------------------------------------------
@@ -745,21 +816,22 @@ public class DeDup {
 	private final static String BTN_SKIP_ADD = "btnSkipAdd";
 	private final static String BTN_SKIP_REMOVE = "btnSkipRemove";
 	private final static String BTN_SKIP_CLEAR = "btnSkipClear";
+	private final static String BTN_EDIT_TYPEFILES = "btnEditTypeFiles";
+
+	private final static String CB_TYPE_FILE = "cbTypeFile";
 
 	private final static String EMPTY_STRING = "";
-	
+
 	private final static String LIST_TARGETS = "listTargets";
 	private final static String LIST_SKIP = "listSkip";
-	
-	private final static String TYPEFILE = ".typeFile";
+
+	public final static String TYPEFILE = ".typeFile";
 	private final static String PATH_SEPARATOR = File.separator;
 	/* @formatter:off */
-	private static final String[] INITIAL_LISTFILES = new String[] {
-			"VB" + TYPEFILE,			
-			"Music" + TYPEFILE,
-			"MusicAndPictures" + TYPEFILE,
-			"Pictures" + TYPEFILE };
+	private static final String[] INITIAL_LISTFILES = new String[] { "VB" + TYPEFILE, "Music" + TYPEFILE,
+			"MusicAndPictures" + TYPEFILE, "Pictures" + TYPEFILE };
+	private JLabel lblActiveTypeFile;
 
-	/* @formatter:on  */
+	/* @formatter:on */
 
 }// class DeDup
