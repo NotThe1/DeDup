@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.prefs.Preferences;
 import java.util.stream.Collectors;
 
+import javax.swing.AbstractButton;
 import javax.swing.Box;
+import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -41,9 +43,10 @@ import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
+import javax.swing.border.BevelBorder;
 import javax.swing.border.EtchedBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -58,6 +61,8 @@ public class DeDup {
 
 	private DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>();
 	private String targetTypesRegex;
+	
+	private ButtonGroup mainGroup =  new ButtonGroup();
 
 	/**
 	 * Launch the application.
@@ -74,7 +79,55 @@ public class DeDup {
 			}// run
 		});
 	}// main
+	/*                                                   */
 
+	private void doStart() {
+	}
+
+	private void doPrintResults() {
+	}
+
+	private void doCopy() {
+	}
+
+	private void doMove() {
+	}
+
+	private void doDelete() {
+	}
+
+	private void doTargets() {
+	}
+
+	private void doDistinct() {
+	}
+
+	private void doUnique() {
+	}
+
+	private void doDuplicates() {
+	}
+
+	private void doExcluded() {
+	}
+	
+	private void setupActionButtons() {
+		setActionButtonsState(false);
+		Component[] components =panelMWR2.getComponents();
+		for (Component component: components) {
+			if (component instanceof JToggleButton) {
+				mainGroup.add((AbstractButton) component);
+				setMainButtonTitle((AbstractButton) component,1234567);
+			}//if
+		}//for
+	}//setupActionButtons
+	private void setActionButtonsState(boolean state) {
+		btnCopy.setEnabled(state);
+		btnMove.setEnabled(state);
+		btnDelete.setEnabled(state);
+	}//setActionButtons
+
+	/*                                                   */
 	private void doAddFolder(DefaultListModel<File> listModel) {
 		JFileChooser fc = new JFileChooser();
 		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -102,6 +155,11 @@ public class DeDup {
 		button.setEnabled(false);
 	}// doAddFolder
 
+	private void setMainButtonTitle(AbstractButton button, int count) {
+		String buttonName = button.getName();
+		button.setText(String.format("%,d %s", count,buttonName));
+	}//setMainTitle
+	
 	private List<Path> getNetTargets() {
 		ArrayList<PathAndCount> pacTargets = getPacTargets();
 
@@ -179,15 +237,15 @@ public class DeDup {
 
 	private void doEditTypeFiles() {
 		String activeList = (String) modelTypeFiles.getSelectedItem();
-		TypeFileMaintenance tfm = new TypeFileMaintenance(frameDeDup,this);
+		TypeFileMaintenance tfm = new TypeFileMaintenance(frameDeDup, this);
 		tfm.setLocationRelativeTo(frameDeDup);
 		tfm.setVisible(true);
 		loadTypeFiles(modelTypeFiles);
-		if (modelTypeFiles.getIndexOf(activeList)!= -1) {
+		if (modelTypeFiles.getIndexOf(activeList) != -1) {
 			modelTypeFiles.setSelectedItem(activeList);
-		}//if
-	}//doEditTypeFiles
-	
+		} // if
+	}// doEditTypeFiles
+
 	public void loadTypeFiles(DefaultComboBoxModel<String> model) {
 		File[] files = getTypeFiles();
 
@@ -246,6 +304,7 @@ public class DeDup {
 		myPrefs.putInt("LocX", point.x);
 		myPrefs.putInt("LocY", point.y);
 		myPrefs.putInt("splitPaneTargets.divederLoc", splitPaneTargets.getDividerLocation());
+		myPrefs.putInt("tabbedPaneSelectedIndex", tabbedPane.getSelectedIndex());
 
 		myPrefs.put("TypeFile", (String) modelTypeFiles.getSelectedItem());
 
@@ -264,9 +323,10 @@ public class DeDup {
 		cbTypeFiles.addItemListener(adapterDeDup);
 
 		Preferences myPrefs = getPreferences();
-		frameDeDup.setSize(myPrefs.getInt("Width", 761), myPrefs.getInt("Height", 693));
+		frameDeDup.setSize(786, 900);
 		frameDeDup.setLocation(myPrefs.getInt("LocX", 100), myPrefs.getInt("LocY", 100));
 		splitPaneTargets.setDividerLocation(myPrefs.getInt("splitPaneTargets.divederLoc", 150));
+		tabbedPane.setSelectedIndex(myPrefs.getInt("tabbedPaneSelectedIndex", 2));
 
 		modelTypeFiles.setSelectedItem(myPrefs.get("TypeFile", "Pictures"));
 
@@ -279,7 +339,8 @@ public class DeDup {
 
 		btnTargetRemove.setEnabled(false);
 		btnSkipRemove.setEnabled(false);
-
+		
+		setupActionButtons();
 	}// appInit
 
 	public DeDup() {
@@ -292,11 +353,10 @@ public class DeDup {
 	 */
 	private void initialize() {
 		frameDeDup = new JFrame();
-		
-		
+
 		frameDeDup.setTitle("DeDup -   version 0.0");
 
-		frameDeDup.setBounds(100, 100, 450, 300);
+		frameDeDup.setBounds(100, 100, 695, 789);
 		frameDeDup.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent arg0) {
@@ -386,12 +446,326 @@ public class DeDup {
 		gbl_panelMain.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
 		panelMain.setLayout(gbl_panelMain);
 
-		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
 		GridBagConstraints gbc_tabbedPane = new GridBagConstraints();
 		gbc_tabbedPane.fill = GridBagConstraints.BOTH;
 		gbc_tabbedPane.gridx = 0;
 		gbc_tabbedPane.gridy = 0;
 		panelMain.add(tabbedPane, gbc_tabbedPane);
+
+		JPanel panelMajorWork = new JPanel();
+		tabbedPane.addTab("  Main  ", null, panelMajorWork, null);
+		GridBagLayout gbl_panelMajorWork = new GridBagLayout();
+		gbl_panelMajorWork.columnWidths = new int[] { 150, 0, 0 };
+		gbl_panelMajorWork.rowHeights = new int[] { 0, 0 };
+		gbl_panelMajorWork.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
+		gbl_panelMajorWork.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
+		panelMajorWork.setLayout(gbl_panelMajorWork);
+
+		JPanel panelMajorWorkLeft = new JPanel();
+		panelMajorWorkLeft.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
+		GridBagConstraints gbc_panelMajorWorkLeft = new GridBagConstraints();
+		gbc_panelMajorWorkLeft.insets = new Insets(0, 0, 0, 5);
+		gbc_panelMajorWorkLeft.fill = GridBagConstraints.BOTH;
+		gbc_panelMajorWorkLeft.gridx = 0;
+		gbc_panelMajorWorkLeft.gridy = 0;
+		panelMajorWork.add(panelMajorWorkLeft, gbc_panelMajorWorkLeft);
+		GridBagLayout gbl_panelMajorWorkLeft = new GridBagLayout();
+		gbl_panelMajorWorkLeft.columnWidths = new int[] { 0, 0 };
+		gbl_panelMajorWorkLeft.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
+		gbl_panelMajorWorkLeft.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelMajorWorkLeft.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		panelMajorWorkLeft.setLayout(gbl_panelMajorWorkLeft);
+
+		JPanel panelMWR0 = new JPanel();
+		panelMWR0.setBorder(new BevelBorder(BevelBorder.RAISED, null, null, null, null));
+		GridBagConstraints gbc_panelMWR0 = new GridBagConstraints();
+		gbc_panelMWR0.insets = new Insets(0, 0, 5, 0);
+		gbc_panelMWR0.fill = GridBagConstraints.BOTH;
+		gbc_panelMWR0.gridx = 0;
+		gbc_panelMWR0.gridy = 0;
+		panelMajorWorkLeft.add(panelMWR0, gbc_panelMWR0);
+		GridBagLayout gbl_panelMWR0 = new GridBagLayout();
+		gbl_panelMWR0.columnWidths = new int[] { 0, 0 };
+		gbl_panelMWR0.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
+		gbl_panelMWR0.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelMWR0.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		panelMWR0.setLayout(gbl_panelMWR0);
+
+		Component verticalStrut_7 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_7 = new GridBagConstraints();
+		gbc_verticalStrut_7.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_7.gridx = 0;
+		gbc_verticalStrut_7.gridy = 0;
+		panelMWR0.add(verticalStrut_7, gbc_verticalStrut_7);
+
+		JButton btnStart = new JButton("Start");
+		btnStart.addActionListener(adapterDeDup);
+		btnStart.setActionCommand(BTN_START);
+		GridBagConstraints gbc_btnStart = new GridBagConstraints();
+		gbc_btnStart.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnStart.insets = new Insets(0, 0, 5, 0);
+		gbc_btnStart.gridx = 0;
+		gbc_btnStart.gridy = 1;
+		panelMWR0.add(btnStart, gbc_btnStart);
+
+		Component verticalStrut_8 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_8 = new GridBagConstraints();
+		gbc_verticalStrut_8.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_8.gridx = 0;
+		gbc_verticalStrut_8.gridy = 2;
+		panelMWR0.add(verticalStrut_8, gbc_verticalStrut_8);
+
+		JButton btnPrintResult = new JButton("Print Result");
+		btnPrintResult.addActionListener(adapterDeDup);
+		btnPrintResult.setActionCommand(BTN_PRINT_RESULTS);
+		GridBagConstraints gbc_btnPrintResult = new GridBagConstraints();
+		gbc_btnPrintResult.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnPrintResult.insets = new Insets(0, 0, 5, 0);
+		gbc_btnPrintResult.gridx = 0;
+		gbc_btnPrintResult.gridy = 3;
+		panelMWR0.add(btnPrintResult, gbc_btnPrintResult);
+
+		Component verticalStrut_9 = Box.createVerticalStrut(5);
+		GridBagConstraints gbc_verticalStrut_9 = new GridBagConstraints();
+		gbc_verticalStrut_9.gridx = 0;
+		gbc_verticalStrut_9.gridy = 4;
+		panelMWR0.add(verticalStrut_9, gbc_verticalStrut_9);
+
+		Component verticalStrut_17 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_17 = new GridBagConstraints();
+		gbc_verticalStrut_17.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_17.gridx = 0;
+		gbc_verticalStrut_17.gridy = 1;
+		panelMajorWorkLeft.add(verticalStrut_17, gbc_verticalStrut_17);
+
+		panelMWR2 = new JPanel();
+		panelMWR2.setBorder(new BevelBorder(BevelBorder.RAISED, null, null, null, null));
+		GridBagConstraints gbc_panelMWR2 = new GridBagConstraints();
+		gbc_panelMWR2.insets = new Insets(0, 0, 5, 0);
+		gbc_panelMWR2.fill = GridBagConstraints.BOTH;
+		gbc_panelMWR2.gridx = 0;
+		gbc_panelMWR2.gridy = 2;
+		panelMajorWorkLeft.add(panelMWR2, gbc_panelMWR2);
+		GridBagLayout gbl_panelMWR2 = new GridBagLayout();
+		gbl_panelMWR2.columnWidths = new int[] { 0, 0 };
+		gbl_panelMWR2.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		gbl_panelMWR2.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelMWR2.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+				Double.MIN_VALUE };
+		panelMWR2.setLayout(gbl_panelMWR2);
+
+		Component verticalStrut_16 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_16 = new GridBagConstraints();
+		gbc_verticalStrut_16.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_16.gridx = 0;
+		gbc_verticalStrut_16.gridy = 0;
+		panelMWR2.add(verticalStrut_16, gbc_verticalStrut_16);
+
+		lblTotalFiles = new JLabel("0000 Total Files");
+		lblTotalFiles.setHorizontalAlignment(SwingConstants.CENTER);
+		GridBagConstraints gbc_lblTotalFiles = new GridBagConstraints();
+		gbc_lblTotalFiles.fill = GridBagConstraints.VERTICAL;
+		gbc_lblTotalFiles.insets = new Insets(0, 0, 5, 0);
+		gbc_lblTotalFiles.gridx = 0;
+		gbc_lblTotalFiles.gridy = 1;
+		panelMWR2.add(lblTotalFiles, gbc_lblTotalFiles);
+
+		Component verticalStrut_10 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_10 = new GridBagConstraints();
+		gbc_verticalStrut_10.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_10.gridx = 0;
+		gbc_verticalStrut_10.gridy = 2;
+		panelMWR2.add(verticalStrut_10, gbc_verticalStrut_10);
+
+		btnTargets = new JToggleButton("Targets");
+		btnTargets.setName("Targets");
+		btnTargets.setActionCommand(BTN_TARGETS);
+		GridBagConstraints gbc_btnTargets = new GridBagConstraints();
+		gbc_btnTargets.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnTargets.insets = new Insets(0, 0, 5, 0);
+		gbc_btnTargets.gridx = 0;
+		gbc_btnTargets.gridy = 3;
+		panelMWR2.add(btnTargets, gbc_btnTargets);
+
+		Component verticalStrut_11 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_11 = new GridBagConstraints();
+		gbc_verticalStrut_11.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_11.gridx = 0;
+		gbc_verticalStrut_11.gridy = 4;
+		panelMWR2.add(verticalStrut_11, gbc_verticalStrut_11);
+
+		btnDistinct = new JToggleButton("Distinct");
+		btnDistinct.setName("Distinct");
+		btnDistinct.setActionCommand(BTN_DISTINCT);
+		GridBagConstraints gbc_btnDistinct = new GridBagConstraints();
+		gbc_btnDistinct.anchor = GridBagConstraints.NORTH;
+		gbc_btnDistinct.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnDistinct.insets = new Insets(0, 0, 5, 0);
+		gbc_btnDistinct.gridx = 0;
+		gbc_btnDistinct.gridy = 5;
+		panelMWR2.add(btnDistinct, gbc_btnDistinct);
+
+		Component verticalStrut_12 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_12 = new GridBagConstraints();
+		gbc_verticalStrut_12.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_12.gridx = 0;
+		gbc_verticalStrut_12.gridy = 6;
+		panelMWR2.add(verticalStrut_12, gbc_verticalStrut_12);
+
+		btnUnique = new JToggleButton("Unique");
+		btnUnique.setName("Unique");
+		btnUnique.setActionCommand(BTN_UNIQUE);
+		GridBagConstraints gbc_btnUnique = new GridBagConstraints();
+		gbc_btnUnique.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnUnique.insets = new Insets(0, 0, 5, 0);
+		gbc_btnUnique.gridx = 0;
+		gbc_btnUnique.gridy = 7;
+		panelMWR2.add(btnUnique, gbc_btnUnique);
+
+		Component verticalStrut_13 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_13 = new GridBagConstraints();
+		gbc_verticalStrut_13.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_13.gridx = 0;
+		gbc_verticalStrut_13.gridy = 8;
+		panelMWR2.add(verticalStrut_13, gbc_verticalStrut_13);
+
+		btnDuplicates = new JToggleButton("Duplicates");
+		btnDuplicates.setName("Duplicates");
+		btnDuplicates.setActionCommand(BTN_DUPLICATES);
+		GridBagConstraints gbc_btnDuplicates = new GridBagConstraints();
+		gbc_btnDuplicates.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnDuplicates.insets = new Insets(0, 0, 5, 0);
+		gbc_btnDuplicates.gridx = 0;
+		gbc_btnDuplicates.gridy = 9;
+		panelMWR2.add(btnDuplicates, gbc_btnDuplicates);
+
+		Component verticalStrut_14 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_14 = new GridBagConstraints();
+		gbc_verticalStrut_14.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_14.gridx = 0;
+		gbc_verticalStrut_14.gridy = 10;
+		panelMWR2.add(verticalStrut_14, gbc_verticalStrut_14);
+
+		btnExcluded = new JToggleButton("Excluded");
+		btnExcluded.setName("Excluded");
+		btnExcluded.setActionCommand(BTN_EXCLUDED);
+		GridBagConstraints gbc_btnExcluded = new GridBagConstraints();
+		gbc_btnExcluded.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnExcluded.insets = new Insets(0, 0, 5, 0);
+		gbc_btnExcluded.gridx = 0;
+		gbc_btnExcluded.gridy = 11;
+		panelMWR2.add(btnExcluded, gbc_btnExcluded);
+
+		Component verticalStrut_15 = Box.createVerticalStrut(5);
+		GridBagConstraints gbc_verticalStrut_15 = new GridBagConstraints();
+		gbc_verticalStrut_15.gridx = 0;
+		gbc_verticalStrut_15.gridy = 12;
+		panelMWR2.add(verticalStrut_15, gbc_verticalStrut_15);
+
+		Component verticalStrut_21 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_21 = new GridBagConstraints();
+		gbc_verticalStrut_21.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_21.gridx = 0;
+		gbc_verticalStrut_21.gridy = 3;
+		panelMajorWorkLeft.add(verticalStrut_21, gbc_verticalStrut_21);
+
+		JPanel panelMWR3 = new JPanel();
+		panelMWR3.setBorder(new BevelBorder(BevelBorder.RAISED, null, null, null, null));
+		GridBagConstraints gbc_panelMWR3 = new GridBagConstraints();
+		gbc_panelMWR3.fill = GridBagConstraints.BOTH;
+		gbc_panelMWR3.gridx = 0;
+		gbc_panelMWR3.gridy = 4;
+		panelMajorWorkLeft.add(panelMWR3, gbc_panelMWR3);
+		GridBagLayout gbl_panelMWR3 = new GridBagLayout();
+		gbl_panelMWR3.columnWidths = new int[] { 0 };
+		gbl_panelMWR3.rowHeights = new int[] { 0, 0, 0, 0, 10, 0, 0 };
+		gbl_panelMWR3.columnWeights = new double[] { 1.0 };
+		gbl_panelMWR3.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+		panelMWR3.setLayout(gbl_panelMWR3);
+
+		Component verticalStrut_18 = Box.createVerticalStrut(20);
+		GridBagConstraints gbc_verticalStrut_18 = new GridBagConstraints();
+		gbc_verticalStrut_18.fill = GridBagConstraints.HORIZONTAL;
+		gbc_verticalStrut_18.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_18.gridx = 0;
+		gbc_verticalStrut_18.gridy = 0;
+		panelMWR3.add(verticalStrut_18, gbc_verticalStrut_18);
+
+		btnCopy = new JButton("Copy");
+		btnCopy.addActionListener(adapterDeDup);
+		btnCopy.setActionCommand(BTN_COPY);
+		GridBagConstraints gbc_btnCopy = new GridBagConstraints();
+		gbc_btnCopy.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnCopy.insets = new Insets(0, 0, 5, 0);
+		gbc_btnCopy.gridx = 0;
+		gbc_btnCopy.gridy = 1;
+		panelMWR3.add(btnCopy, gbc_btnCopy);
+
+		Component verticalStrut_19 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_19 = new GridBagConstraints();
+		gbc_verticalStrut_19.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_19.gridx = 0;
+		gbc_verticalStrut_19.gridy = 2;
+		panelMWR3.add(verticalStrut_19, gbc_verticalStrut_19);
+
+		btnMove = new JButton("Move");
+		btnMove.addActionListener(adapterDeDup);
+		btnMove.setActionCommand(BTN_MOVE);
+		GridBagConstraints gbc_btnMove = new GridBagConstraints();
+		gbc_btnMove.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnMove.insets = new Insets(0, 0, 5, 0);
+		gbc_btnMove.gridx = 0;
+		gbc_btnMove.gridy = 3;
+		panelMWR3.add(btnMove, gbc_btnMove);
+		// gbc_verticalStrut_19.insets = new Insets(0, 0, 5, 5);
+		// gbc_verticalStrut_19.gridx = 0;
+		// gbc_verticalStrut_19.gridy = 4;
+
+		Component verticalStrut_20 = Box.createVerticalStrut(10);
+		GridBagConstraints gbc_verticalStrut_20 = new GridBagConstraints();
+		gbc_verticalStrut_20.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_20.gridx = 0;
+		gbc_verticalStrut_20.gridy = 4;
+		panelMWR3.add(verticalStrut_20, gbc_verticalStrut_20);
+
+		btnDelete = new JButton("Delete");
+		btnDelete.addActionListener(adapterDeDup);
+		btnDelete.setActionCommand(BTN_DELETE);
+		GridBagConstraints gbc_btnDelete = new GridBagConstraints();
+		gbc_btnDelete.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnDelete.insets = new Insets(0, 0, 5, 0);
+		gbc_btnDelete.gridx = 0;
+		gbc_btnDelete.gridy = 5;
+		panelMWR3.add(btnDelete, gbc_btnDelete);
+
+		Component verticalStrut_22 = Box.createVerticalStrut(5);
+		GridBagConstraints gbc_verticalStrut_22 = new GridBagConstraints();
+		gbc_verticalStrut_22.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_22.gridx = 0;
+		gbc_verticalStrut_22.gridy = 6;
+		panelMWR3.add(verticalStrut_22, gbc_verticalStrut_22);
+
+		JPanel panelMajorWorkRight = new JPanel();
+		panelMajorWorkRight.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
+		GridBagConstraints gbc_panelMajorWorkRight = new GridBagConstraints();
+		gbc_panelMajorWorkRight.fill = GridBagConstraints.BOTH;
+		gbc_panelMajorWorkRight.gridx = 1;
+		gbc_panelMajorWorkRight.gridy = 0;
+		panelMajorWork.add(panelMajorWorkRight, gbc_panelMajorWorkRight);
+		GridBagLayout gbl_panelMajorWorkRight = new GridBagLayout();
+		gbl_panelMajorWorkRight.columnWidths = new int[] { 0, 0 };
+		gbl_panelMajorWorkRight.rowHeights = new int[] { 0, 0 };
+		gbl_panelMajorWorkRight.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelMajorWorkRight.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
+		panelMajorWorkRight.setLayout(gbl_panelMajorWorkRight);
+
+		JScrollPane scrollPaneMajor = new JScrollPane();
+		GridBagConstraints gbc_scrollPaneMajor = new GridBagConstraints();
+		gbc_scrollPaneMajor.fill = GridBagConstraints.BOTH;
+		gbc_scrollPaneMajor.gridx = 0;
+		gbc_scrollPaneMajor.gridy = 0;
+		panelMajorWorkRight.add(scrollPaneMajor, gbc_scrollPaneMajor);
 
 		splitPaneTargets = new JSplitPane();
 		splitPaneTargets.setOrientation(JSplitPane.VERTICAL_SPLIT);
@@ -400,15 +774,15 @@ public class DeDup {
 		JPanel panelTargets = new JPanel();
 		splitPaneTargets.setLeftComponent(panelTargets);
 		GridBagLayout gbl_panelTargets = new GridBagLayout();
-		gbl_panelTargets.columnWidths = new int[] {150, 0, 0};
+		gbl_panelTargets.columnWidths = new int[] { 150, 0, 0 };
 		gbl_panelTargets.rowHeights = new int[] { 0, 0, 0 };
 		gbl_panelTargets.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
 		gbl_panelTargets.rowWeights = new double[] { 1.0, 0.0, Double.MIN_VALUE };
 		panelTargets.setLayout(gbl_panelTargets);
 
 		JPanel panelTargets1 = new JPanel();
-		panelTargets1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Folders to Search",
-				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
+		panelTargets1.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null),
+				"Folders to Search", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
 		GridBagConstraints gbc_panelTargets1 = new GridBagConstraints();
 		gbc_panelTargets1.anchor = GridBagConstraints.NORTH;
 		gbc_panelTargets1.insets = new Insets(0, 0, 5, 5);
@@ -488,7 +862,7 @@ public class DeDup {
 		scrollPaneTargets.setViewportView(listTargets);
 
 		JPanel panel_1 = new JPanel();
-		panel_1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Type Lists",
+		panel_1.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Type Lists",
 				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
 		GridBagConstraints gbc_panel_1 = new GridBagConstraints();
 		gbc_panel_1.insets = new Insets(0, 0, 0, 5);
@@ -539,8 +913,8 @@ public class DeDup {
 		panelSkip.setLayout(gbl_panelSkip);
 
 		JPanel panelSkip1 = new JPanel();
-		panelSkip1.setBorder(new TitledBorder(new LineBorder(new Color(0, 0, 0), 1, true), "Folders to Skip",
-				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
+		panelSkip1.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null),
+				"Folders to Skip", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
 		GridBagConstraints gbc_panelSkip1 = new GridBagConstraints();
 		gbc_panelSkip1.insets = new Insets(0, 0, 0, 5);
 		gbc_panelSkip1.fill = GridBagConstraints.BOTH;
@@ -618,7 +992,7 @@ public class DeDup {
 		splitPaneTargets.setDividerLocation(150);
 
 		JScrollPane scrollLog = new JScrollPane();
-		tabbedPane.addTab("Log", null, scrollLog, null);
+		tabbedPane.addTab("Application Log", null, scrollLog, null);
 
 		textLog = new JTextPane();
 		scrollLog.setViewportView(textLog);
@@ -725,6 +1099,39 @@ public class DeDup {
 		@Override
 		public void actionPerformed(ActionEvent actionEvent) {
 			switch (actionEvent.getActionCommand()) {
+			case BTN_START:
+				doStart();
+				break;
+			case BTN_PRINT_RESULTS:
+				doPrintResults();
+				break;
+
+			case BTN_COPY:
+				doCopy();
+				break;
+			case BTN_MOVE:
+				doMove();
+				break;
+			case BTN_DELETE:
+				doDelete();
+				break;
+
+			case BTN_TARGETS:
+				doTargets();
+				break;
+			case BTN_DISTINCT:
+				doDistinct();
+				break;
+			case BTN_UNIQUE:
+				doUnique();
+				break;
+			case BTN_DUPLICATES:
+				doDuplicates();
+				break;
+			case BTN_EXCLUDED:
+				doExcluded();
+				break;
+
 			case BTN_TARGET_ADD:
 				doAddFolder(targetListModel);
 				break;
@@ -818,6 +1225,19 @@ public class DeDup {
 	private final static String BTN_SKIP_CLEAR = "btnSkipClear";
 	private final static String BTN_EDIT_TYPEFILES = "btnEditTypeFiles";
 
+	private final static String BTN_START = "btnStart";
+	private final static String BTN_PRINT_RESULTS = "btnPrintResults";
+
+	private final static String BTN_COPY = "btnCopy";
+	private final static String BTN_MOVE = "btnMove";
+	private final static String BTN_DELETE = "btnDelete:";
+
+	private final static String BTN_TARGETS = "btnTargets";
+	private final static String BTN_DISTINCT = "btnDistinct";
+	private final static String BTN_UNIQUE = "btnUnique";
+	private final static String BTN_DUPLICATES = "btnDuplicates";
+	private final static String BTN_EXCLUDED = "btnExcluded";
+
 	private final static String CB_TYPE_FILE = "cbTypeFile";
 
 	private final static String EMPTY_STRING = "";
@@ -831,6 +1251,17 @@ public class DeDup {
 	private static final String[] INITIAL_LISTFILES = new String[] { "VB" + TYPEFILE, "Music" + TYPEFILE,
 			"MusicAndPictures" + TYPEFILE, "Pictures" + TYPEFILE };
 	private JLabel lblActiveTypeFile;
+	private JTabbedPane tabbedPane;
+	private JLabel lblTotalFiles;
+	private JToggleButton btnTargets;
+	private JToggleButton btnDistinct;
+	private JToggleButton btnUnique;
+	private JToggleButton btnDuplicates;
+	private JToggleButton btnExcluded;
+	private JButton btnDelete;
+	private JButton btnMove;
+	private JButton btnCopy;
+	private JPanel panelMWR2;
 
 	/* @formatter:on */
 
