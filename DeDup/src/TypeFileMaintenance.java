@@ -54,7 +54,6 @@ public class TypeFileMaintenance extends JDialog {
 	private DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>();
 	private DefaultListModel<String> modelTypes = new DefaultListModel<String>();
 
-
 	private String newListName = EMPTY_STRING;
 
 	/**
@@ -118,17 +117,17 @@ public class TypeFileMaintenance extends JDialog {
 						modelTypeFiles.setSelectedItem(currentListName);
 						lblActiveList.setForeground(Color.BLUE);
 						break;
-						
+
 					case JOptionPane.CANCEL_OPTION:
 						modelTypeFiles.setSelectedItem(newListName);
 						return;
-						
+
 					case JOptionPane.NO_OPTION:
 						modelTypeFiles.removeElement(newListName);
 						newListName = EMPTY_STRING;
 						lblActiveList.setForeground(Color.BLUE);
 						break;
-						
+
 					default:
 						log.warnf("[itemStateChanged.showConfirmDialog] in default Bad return ", "");
 					}// switch
@@ -161,7 +160,7 @@ public class TypeFileMaintenance extends JDialog {
 			vector.add(modelTypes.get(i));
 		} // for
 		String fileName = deDup.getAppDataDirectory() + listName + DeDup.TYPEFILE;
-//		System.out.println(fileName);
+		// System.out.println(fileName);
 		try {
 			Files.write(Paths.get(fileName), vector, StandardOpenOption.CREATE);
 			deDup.loadTypeFiles(modelTypeFiles);
@@ -193,9 +192,12 @@ public class TypeFileMaintenance extends JDialog {
 
 	private String getListName(String title) {
 		String listName = JOptionPane.showInputDialog(this, "Enter list name");
-		if ((listName == null) || listName.equals(EMPTY_STRING)) {
-			listName = null;
-		} // if
+		if (listName != null) {
+			listName = listName.replaceAll(SPACE, EMPTY_STRING);
+			if (listName.equals(EMPTY_STRING)) {
+				listName = null;
+			} // inner if
+		} // outer if
 		return listName;
 	}// getistName
 
@@ -204,7 +206,7 @@ public class TypeFileMaintenance extends JDialog {
 		String listPath = deDup.getAppDataDirectory() + (String) modelTypeFiles.getSelectedItem() + DeDup.TYPEFILE;
 		return Paths.get(listPath);
 	}// getTypeFilePath
-	
+
 	private void appClose() {
 		this.dispose();
 	}//
@@ -228,7 +230,7 @@ public class TypeFileMaintenance extends JDialog {
 	// }//constructor
 
 	public TypeFileMaintenance(JFrame frame, DeDup deDup) {
-		super(frame,"Type File Mainenance", true);
+		super(frame, "Type File Mainenance", true);
 		this.deDup = deDup;
 		initialize();
 		appInit();
@@ -423,9 +425,9 @@ public class TypeFileMaintenance extends JDialog {
 			case BTN_OK:
 				appClose();
 				break;
-//			case BTN_CANCEL:
-//				//
-//				break;
+			// case BTN_CANCEL:
+			// //
+			// break;
 			default:
 				log.warnf("[AdapterTypeFileMaintenance.actionPerformed] switch at default: Action Command = %s%n",
 						actionEvent.getActionCommand());
@@ -465,7 +467,8 @@ public class TypeFileMaintenance extends JDialog {
 	private JComboBox<String> cbTypeFiles;
 
 	private final static String EMPTY_STRING = "";
-//	private final static String NAME_SEPARATOR = File.separator;
+	private final static String SPACE = " ";
+	// private final static String NAME_SEPARATOR = File.separator;
 
 	private final static String MNU_LISTS_NEW = "mnuListsNew";
 	private final static String MNU_LISTS_SAVE = "mnuListsSave";
@@ -477,7 +480,7 @@ public class TypeFileMaintenance extends JDialog {
 	private final static String BTN_REMOVE_ITEMS = "btnRemoveItems";
 
 	private final static String BTN_OK = "btnOK";
-//	private final static String BTN_CANCEL = "btnCancel";
+	// private final static String BTN_CANCEL = "btnCancel";
 
 	private final static String CB_TYPE_FILE = "cbTypeFile";
 	private final static String LIST_TYPES = "listTypes";

@@ -400,7 +400,7 @@ public class DeDup {
 		JPanel panelTargets = new JPanel();
 		splitPaneTargets.setLeftComponent(panelTargets);
 		GridBagLayout gbl_panelTargets = new GridBagLayout();
-		gbl_panelTargets.columnWidths = new int[] { 0, 0, 0 };
+		gbl_panelTargets.columnWidths = new int[] {150, 0, 0};
 		gbl_panelTargets.rowHeights = new int[] { 0, 0, 0 };
 		gbl_panelTargets.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
 		gbl_panelTargets.rowWeights = new double[] { 1.0, 0.0, Double.MIN_VALUE };
@@ -532,7 +532,7 @@ public class DeDup {
 		JPanel panelSkip = new JPanel();
 		splitPaneTargets.setRightComponent(panelSkip);
 		GridBagLayout gbl_panelSkip = new GridBagLayout();
-		gbl_panelSkip.columnWidths = new int[] { 0, 0, 0 };
+		gbl_panelSkip.columnWidths = new int[] { 150, 0, 0 };
 		gbl_panelSkip.rowHeights = new int[] { 0, 0 };
 		gbl_panelSkip.columnWeights = new double[] { 0.0, 1.0, Double.MIN_VALUE };
 		gbl_panelSkip.rowWeights = new double[] { 1.0, Double.MIN_VALUE };
