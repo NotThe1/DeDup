@@ -117,7 +117,7 @@ public class DeDup {
 		for (Component component: components) {
 			if (component instanceof JToggleButton) {
 				mainGroup.add((AbstractButton) component);
-				setMainButtonTitle((AbstractButton) component,1234567);
+				setMainButtonTitle((AbstractButton) component,0);
 			}//if
 		}//for
 	}//setupActionButtons
@@ -487,17 +487,10 @@ public class DeDup {
 		panelMajorWorkLeft.add(panelMWR0, gbc_panelMWR0);
 		GridBagLayout gbl_panelMWR0 = new GridBagLayout();
 		gbl_panelMWR0.columnWidths = new int[] { 0, 0 };
-		gbl_panelMWR0.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
+		gbl_panelMWR0.rowHeights = new int[] { 20, 0, 10, 0, 5, 0 };
 		gbl_panelMWR0.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gbl_panelMWR0.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panelMWR0.setLayout(gbl_panelMWR0);
-
-		Component verticalStrut_7 = Box.createVerticalStrut(20);
-		GridBagConstraints gbc_verticalStrut_7 = new GridBagConstraints();
-		gbc_verticalStrut_7.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_7.gridx = 0;
-		gbc_verticalStrut_7.gridy = 0;
-		panelMWR0.add(verticalStrut_7, gbc_verticalStrut_7);
 
 		JButton btnStart = new JButton("Start");
 		btnStart.addActionListener(adapterDeDup);
@@ -509,13 +502,6 @@ public class DeDup {
 		gbc_btnStart.gridy = 1;
 		panelMWR0.add(btnStart, gbc_btnStart);
 
-		Component verticalStrut_8 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_8 = new GridBagConstraints();
-		gbc_verticalStrut_8.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_8.gridx = 0;
-		gbc_verticalStrut_8.gridy = 2;
-		panelMWR0.add(verticalStrut_8, gbc_verticalStrut_8);
-
 		JButton btnPrintResult = new JButton("Print Result");
 		btnPrintResult.addActionListener(adapterDeDup);
 		btnPrintResult.setActionCommand(BTN_PRINT_RESULTS);
@@ -525,12 +511,6 @@ public class DeDup {
 		gbc_btnPrintResult.gridx = 0;
 		gbc_btnPrintResult.gridy = 3;
 		panelMWR0.add(btnPrintResult, gbc_btnPrintResult);
-
-		Component verticalStrut_9 = Box.createVerticalStrut(5);
-		GridBagConstraints gbc_verticalStrut_9 = new GridBagConstraints();
-		gbc_verticalStrut_9.gridx = 0;
-		gbc_verticalStrut_9.gridy = 4;
-		panelMWR0.add(verticalStrut_9, gbc_verticalStrut_9);
 
 		Component verticalStrut_17 = Box.createVerticalStrut(20);
 		GridBagConstraints gbc_verticalStrut_17 = new GridBagConstraints();
@@ -549,20 +529,14 @@ public class DeDup {
 		panelMajorWorkLeft.add(panelMWR2, gbc_panelMWR2);
 		GridBagLayout gbl_panelMWR2 = new GridBagLayout();
 		gbl_panelMWR2.columnWidths = new int[] { 0, 0 };
-		gbl_panelMWR2.rowHeights = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+		gbl_panelMWR2.rowHeights = new int[] { 20, 0, 20, 0, 10, 0, 10, 0, 10, 0, 10, 0, 5, 0 };
 		gbl_panelMWR2.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
 		gbl_panelMWR2.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 				Double.MIN_VALUE };
 		panelMWR2.setLayout(gbl_panelMWR2);
 
-		Component verticalStrut_16 = Box.createVerticalStrut(20);
-		GridBagConstraints gbc_verticalStrut_16 = new GridBagConstraints();
-		gbc_verticalStrut_16.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_16.gridx = 0;
-		gbc_verticalStrut_16.gridy = 0;
-		panelMWR2.add(verticalStrut_16, gbc_verticalStrut_16);
-
 		lblTotalFiles = new JLabel("0000 Total Files");
+		lblTotalFiles.setForeground(Color.BLUE);
 		lblTotalFiles.setHorizontalAlignment(SwingConstants.CENTER);
 		GridBagConstraints gbc_lblTotalFiles = new GridBagConstraints();
 		gbc_lblTotalFiles.fill = GridBagConstraints.VERTICAL;
@@ -570,13 +544,6 @@ public class DeDup {
 		gbc_lblTotalFiles.gridx = 0;
 		gbc_lblTotalFiles.gridy = 1;
 		panelMWR2.add(lblTotalFiles, gbc_lblTotalFiles);
-
-		Component verticalStrut_10 = Box.createVerticalStrut(20);
-		GridBagConstraints gbc_verticalStrut_10 = new GridBagConstraints();
-		gbc_verticalStrut_10.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_10.gridx = 0;
-		gbc_verticalStrut_10.gridy = 2;
-		panelMWR2.add(verticalStrut_10, gbc_verticalStrut_10);
 
 		btnTargets = new JToggleButton("Targets");
 		btnTargets.setName("Targets");
@@ -587,13 +554,6 @@ public class DeDup {
 		gbc_btnTargets.gridx = 0;
 		gbc_btnTargets.gridy = 3;
 		panelMWR2.add(btnTargets, gbc_btnTargets);
-
-		Component verticalStrut_11 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_11 = new GridBagConstraints();
-		gbc_verticalStrut_11.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_11.gridx = 0;
-		gbc_verticalStrut_11.gridy = 4;
-		panelMWR2.add(verticalStrut_11, gbc_verticalStrut_11);
 
 		btnDistinct = new JToggleButton("Distinct");
 		btnDistinct.setName("Distinct");
@@ -606,13 +566,6 @@ public class DeDup {
 		gbc_btnDistinct.gridy = 5;
 		panelMWR2.add(btnDistinct, gbc_btnDistinct);
 
-		Component verticalStrut_12 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_12 = new GridBagConstraints();
-		gbc_verticalStrut_12.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_12.gridx = 0;
-		gbc_verticalStrut_12.gridy = 6;
-		panelMWR2.add(verticalStrut_12, gbc_verticalStrut_12);
-
 		btnUnique = new JToggleButton("Unique");
 		btnUnique.setName("Unique");
 		btnUnique.setActionCommand(BTN_UNIQUE);
@@ -622,13 +575,6 @@ public class DeDup {
 		gbc_btnUnique.gridx = 0;
 		gbc_btnUnique.gridy = 7;
 		panelMWR2.add(btnUnique, gbc_btnUnique);
-
-		Component verticalStrut_13 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_13 = new GridBagConstraints();
-		gbc_verticalStrut_13.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_13.gridx = 0;
-		gbc_verticalStrut_13.gridy = 8;
-		panelMWR2.add(verticalStrut_13, gbc_verticalStrut_13);
 
 		btnDuplicates = new JToggleButton("Duplicates");
 		btnDuplicates.setName("Duplicates");
@@ -640,13 +586,6 @@ public class DeDup {
 		gbc_btnDuplicates.gridy = 9;
 		panelMWR2.add(btnDuplicates, gbc_btnDuplicates);
 
-		Component verticalStrut_14 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_14 = new GridBagConstraints();
-		gbc_verticalStrut_14.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_14.gridx = 0;
-		gbc_verticalStrut_14.gridy = 10;
-		panelMWR2.add(verticalStrut_14, gbc_verticalStrut_14);
-
 		btnExcluded = new JToggleButton("Excluded");
 		btnExcluded.setName("Excluded");
 		btnExcluded.setActionCommand(BTN_EXCLUDED);
@@ -656,12 +595,6 @@ public class DeDup {
 		gbc_btnExcluded.gridx = 0;
 		gbc_btnExcluded.gridy = 11;
 		panelMWR2.add(btnExcluded, gbc_btnExcluded);
-
-		Component verticalStrut_15 = Box.createVerticalStrut(5);
-		GridBagConstraints gbc_verticalStrut_15 = new GridBagConstraints();
-		gbc_verticalStrut_15.gridx = 0;
-		gbc_verticalStrut_15.gridy = 12;
-		panelMWR2.add(verticalStrut_15, gbc_verticalStrut_15);
 
 		Component verticalStrut_21 = Box.createVerticalStrut(20);
 		GridBagConstraints gbc_verticalStrut_21 = new GridBagConstraints();
@@ -679,18 +612,10 @@ public class DeDup {
 		panelMajorWorkLeft.add(panelMWR3, gbc_panelMWR3);
 		GridBagLayout gbl_panelMWR3 = new GridBagLayout();
 		gbl_panelMWR3.columnWidths = new int[] { 0 };
-		gbl_panelMWR3.rowHeights = new int[] { 0, 0, 0, 0, 10, 0, 0 };
+		gbl_panelMWR3.rowHeights = new int[] { 20, 0, 10, 0, 10, 0, 5 };
 		gbl_panelMWR3.columnWeights = new double[] { 1.0 };
 		gbl_panelMWR3.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 		panelMWR3.setLayout(gbl_panelMWR3);
-
-		Component verticalStrut_18 = Box.createVerticalStrut(20);
-		GridBagConstraints gbc_verticalStrut_18 = new GridBagConstraints();
-		gbc_verticalStrut_18.fill = GridBagConstraints.HORIZONTAL;
-		gbc_verticalStrut_18.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_18.gridx = 0;
-		gbc_verticalStrut_18.gridy = 0;
-		panelMWR3.add(verticalStrut_18, gbc_verticalStrut_18);
 
 		btnCopy = new JButton("Copy");
 		btnCopy.addActionListener(adapterDeDup);
@@ -702,13 +627,6 @@ public class DeDup {
 		gbc_btnCopy.gridy = 1;
 		panelMWR3.add(btnCopy, gbc_btnCopy);
 
-		Component verticalStrut_19 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_19 = new GridBagConstraints();
-		gbc_verticalStrut_19.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_19.gridx = 0;
-		gbc_verticalStrut_19.gridy = 2;
-		panelMWR3.add(verticalStrut_19, gbc_verticalStrut_19);
-
 		btnMove = new JButton("Move");
 		btnMove.addActionListener(adapterDeDup);
 		btnMove.setActionCommand(BTN_MOVE);
@@ -718,16 +636,6 @@ public class DeDup {
 		gbc_btnMove.gridx = 0;
 		gbc_btnMove.gridy = 3;
 		panelMWR3.add(btnMove, gbc_btnMove);
-		// gbc_verticalStrut_19.insets = new Insets(0, 0, 5, 5);
-		// gbc_verticalStrut_19.gridx = 0;
-		// gbc_verticalStrut_19.gridy = 4;
-
-		Component verticalStrut_20 = Box.createVerticalStrut(10);
-		GridBagConstraints gbc_verticalStrut_20 = new GridBagConstraints();
-		gbc_verticalStrut_20.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_20.gridx = 0;
-		gbc_verticalStrut_20.gridy = 4;
-		panelMWR3.add(verticalStrut_20, gbc_verticalStrut_20);
 
 		btnDelete = new JButton("Delete");
 		btnDelete.addActionListener(adapterDeDup);
@@ -738,13 +646,6 @@ public class DeDup {
 		gbc_btnDelete.gridx = 0;
 		gbc_btnDelete.gridy = 5;
 		panelMWR3.add(btnDelete, gbc_btnDelete);
-
-		Component verticalStrut_22 = Box.createVerticalStrut(5);
-		GridBagConstraints gbc_verticalStrut_22 = new GridBagConstraints();
-		gbc_verticalStrut_22.insets = new Insets(0, 0, 5, 0);
-		gbc_verticalStrut_22.gridx = 0;
-		gbc_verticalStrut_22.gridy = 6;
-		panelMWR3.add(verticalStrut_22, gbc_verticalStrut_22);
 
 		JPanel panelMajorWorkRight = new JPanel();
 		panelMajorWorkRight.setBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null));
