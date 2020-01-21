@@ -97,10 +97,8 @@ public class TypeFileMaintenance extends JDialog {
 			newListName = listName;
 		} else {
 			JOptionPane.showMessageDialog(this, "Duplicate List Name: " + listName);
-		} //
+		} //if
 
-		// int index = modelTypeFiles.getIndexOf(listName);
-		// System.out.printf("[doNew]index: %d - %s%n", index, listName);
 	}// doNew
 
 	private void doChangeList(String actionCommand, int stateChange) {

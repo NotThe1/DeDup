@@ -14,8 +14,12 @@ import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -298,6 +302,34 @@ public class DeDup {
 	 * Create the application.
 	 */
 
+	private DefaultListModel<File> getListModel(String name) {
+		File file = new File(getAppDataDirectory(), name);
+		DefaultListModel<File> ans = new DefaultListModel<File>();
+		try {
+			FileInputStream fis = new FileInputStream(file);
+			ObjectInputStream ois = new ObjectInputStream(fis);
+			ans = (DefaultListModel<File>) ois.readObject();
+			ois.close();
+			fis.close();
+		} catch (Exception e) {
+			log.error("Could not get Target/Skip list");
+		} // try
+		return ans;
+	}// saveListModel
+
+	private void saveListModel(DefaultListModel<File> listModel, String name) {
+		File file = new File(getAppDataDirectory(), name);
+		try {
+			FileOutputStream fos = new FileOutputStream(file);
+			ObjectOutputStream oos = new ObjectOutputStream(fos);
+			oos.writeObject(listModel);
+			fos.close();
+			oos.close();
+		} catch (Exception e) {
+			log.error("Could not save Target/Skip list");
+		} // try
+	}// saveListModel
+
 	public Preferences getPreferences() {
 		return Preferences.userNodeForPackage(DeDup.class).node(this.getClass().getSimpleName());
 	}// getPreferences
@@ -316,6 +348,9 @@ public class DeDup {
 		myPrefs.put("TypeFile", (String) modelTypeFiles.getSelectedItem());
 
 		myPrefs = null;
+
+		saveListModel(targetListModel, LIST_TARGETS);
+		saveListModel(skipListModel, LIST_SKIP);
 	}// appClose
 
 	public void appInit() {
@@ -338,6 +373,9 @@ public class DeDup {
 		modelTypeFiles.setSelectedItem(myPrefs.get("TypeFile", "Pictures"));
 
 		myPrefs = null;
+
+		targetListModel = getListModel(LIST_TARGETS);
+		skipListModel = getListModel(LIST_SKIP);
 
 		loadTargetRegex();
 
@@ -416,34 +454,23 @@ public class DeDup {
 		JButton btnTest = new JButton("test");
 		btnTest.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				
-//				HashMap<String, String> catalog1 = new HashMap<String, String>();
-//				if (catalog1.isEmpty()) {
-//					log.info("catalog1 is empty");
-//				}else {
-//					log.info("catalog1 is NOT empty");
-//				}//if
-//				
-//				if (catalog1.containsKey("key")) {
-//					log.info("catalog1 has key");
-//				}else {
-//					log.info("catalog1 does NOT have key");
-//				}//if
-//
-//				
-//				int a = 0;
-				
+
 				log.infof("available Processors = %d%n", PROCESSORS);
 
-				File folder = targetListModel.elementAt(0);
-				
-				ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
-				CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
-						skipListModel);
-				poolTakeCensus.execute(censusTaker);
-				while(!poolTakeCensus.isQuiescent()) {
-					// psuedo join
-				}//while
+				List<Path> netSkipModel = getNetSkip();
+				List<Path> netTargetModel = getNetTargets();
+				for (Path path : netTargetModel) {
+					File folder = path.toFile();
+					// File folder = targetListModel.elementAt(0);
+
+					ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
+					CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
+							netSkipModel);
+					poolTakeCensus.execute(censusTaker);
+					while (!poolTakeCensus.isQuiescent()) {
+						// psuedo join
+					} // while
+				} // for Target
 			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest = new GridBagConstraints();

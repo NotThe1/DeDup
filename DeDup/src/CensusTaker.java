@@ -4,15 +4,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.swing.DefaultListModel;
 
 /*
  * main class to go thru each folder to:
@@ -25,13 +25,14 @@ public class CensusTaker extends RecursiveAction {
 	private File folder;
 	private String listName;
 	private Pattern patternTargets;
-	private DefaultListModel<File> skipListModel;
+	private List<Path> skipListModel;
+//	private DefaultListModel<File> skipListModel;
 
 	private File catalogFile;
 	private HashMap<String, String> catalogOriginal;
 	private HashMap<String, String> catalogCurrent;
 
-	public CensusTaker(File folder, String listName, Pattern patternTargets, DefaultListModel<File> skipListModel) {
+	public CensusTaker(File folder, String listName, Pattern patternTargets, List<Path> skipListModel) {
 		this.folder = folder;
 		this.listName = listName;
 		this.patternTargets = patternTargets;
@@ -48,7 +49,7 @@ public class CensusTaker extends RecursiveAction {
 
 	@Override
 	protected void compute() {
-		if (skipListModel.contains(folder)) {
+		if (skipListModel.contains(folder.toPath())) {
 			log.infof("[CensusTaker.compute] skipping: %s%n", folder);
 			return;
 		} // if we need to skip
