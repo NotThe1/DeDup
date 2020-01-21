@@ -23,7 +23,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 import java.util.prefs.Preferences;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.swing.AbstractButton;
@@ -58,11 +60,13 @@ public class DeDup {
 	private AdapterDeDup adapterDeDup = new AdapterDeDup();
 	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
+	private static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
 
 	private DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>();
-	private String targetTypesRegex;
-	
-	private ButtonGroup mainGroup =  new ButtonGroup();
+	// private String targetTypesRegex;
+	private Pattern patternTargets = null;
+
+	private ButtonGroup mainGroup = new ButtonGroup();
 
 	/**
 	 * Launch the application.
@@ -110,22 +114,23 @@ public class DeDup {
 
 	private void doExcluded() {
 	}
-	
+
 	private void setupActionButtons() {
 		setActionButtonsState(false);
-		Component[] components =panelMWR2.getComponents();
-		for (Component component: components) {
+		Component[] components = panelMWR2.getComponents();
+		for (Component component : components) {
 			if (component instanceof JToggleButton) {
 				mainGroup.add((AbstractButton) component);
-				setMainButtonTitle((AbstractButton) component,0);
-			}//if
-		}//for
-	}//setupActionButtons
+				setMainButtonTitle((AbstractButton) component, 0);
+			} // if
+		} // for
+	}// setupActionButtons
+
 	private void setActionButtonsState(boolean state) {
 		btnCopy.setEnabled(state);
 		btnMove.setEnabled(state);
 		btnDelete.setEnabled(state);
-	}//setActionButtons
+	}// setActionButtons
 
 	/*                                                   */
 	private void doAddFolder(DefaultListModel<File> listModel) {
@@ -157,9 +162,9 @@ public class DeDup {
 
 	private void setMainButtonTitle(AbstractButton button, int count) {
 		String buttonName = button.getName();
-		button.setText(String.format("%,d %s", count,buttonName));
-	}//setMainTitle
-	
+		button.setText(String.format("%,d %s", count, buttonName));
+	}// setMainTitle
+
 	private List<Path> getNetTargets() {
 		ArrayList<PathAndCount> pacTargets = getPacTargets();
 
@@ -218,7 +223,7 @@ public class DeDup {
 		lblActiveTypeFile.setText(activeTypeFile);
 
 		try {
-			ArrayList<String> targetSuffixes = (ArrayList) Files.readAllLines(Paths.get(typeFile));
+			ArrayList<String> targetSuffixes = (ArrayList<String>) Files.readAllLines(Paths.get(typeFile));
 			StringBuilder sb = new StringBuilder("(?)"); // case insensitive
 			for (String targetSuffix : targetSuffixes) {
 				targetSuffix.trim();
@@ -227,10 +232,12 @@ public class DeDup {
 			} // for each file type
 			sb.deleteCharAt(sb.length() - 1); // remove trailing "|"
 
-			targetTypesRegex = sb.toString();
+			String targetTypesRegex = sb.toString();
+			patternTargets = Pattern.compile(targetTypesRegex);
 		} catch (Exception e) {
 			lblActiveTypeFile.setText("Failed to load target types");
 			log.infof("Failed to read type file : %s%n", typeFile);
+			patternTargets = null;
 		} // try
 
 	}// loadTargetRegex
@@ -339,7 +346,7 @@ public class DeDup {
 
 		btnTargetRemove.setEnabled(false);
 		btnSkipRemove.setEnabled(false);
-		
+
 		setupActionButtons();
 	}// appInit
 
@@ -409,21 +416,34 @@ public class DeDup {
 		JButton btnTest = new JButton("test");
 		btnTest.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				
+//				HashMap<String, String> catalog1 = new HashMap<String, String>();
+//				if (catalog1.isEmpty()) {
+//					log.info("catalog1 is empty");
+//				}else {
+//					log.info("catalog1 is NOT empty");
+//				}//if
+//				
+//				if (catalog1.containsKey("key")) {
+//					log.info("catalog1 has key");
+//				}else {
+//					log.info("catalog1 does NOT have key");
+//				}//if
+//
+//				
+//				int a = 0;
+				
+				log.infof("available Processors = %d%n", PROCESSORS);
 
-				List<Path> targetNet = getNetTargets();
-				log.addNL(2);
-				log.info("TargetNet");
-				for (Path path : targetNet) {
-					log.infof(" %s%n", path.toString());
-				} // for
-
-				List<Path> skipNet = getNetSkip();
-				log.addNL(1);
-				log.info("SkipNet");
-				for (Path path : skipNet) {
-					log.infof(" %s%n", path.toString());
-				} // for
-
+				File folder = targetListModel.elementAt(0);
+				
+				ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
+				CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
+						skipListModel);
+				poolTakeCensus.execute(censusTaker);
+				while(!poolTakeCensus.isQuiescent()) {
+					// psuedo join
+				}//while
 			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest = new GridBagConstraints();
