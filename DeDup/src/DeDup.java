@@ -90,7 +90,23 @@ public class DeDup {
 	/*                                                   */
 
 	private void doStart() {
-	}
+		log.infof("%nStarted census. Available Processors = %d%n", PROCESSORS);
+
+		List<Path> netSkipModel = getNetSkip();
+		List<Path> netTargetModel = getNetTargets();
+		for (Path path : netTargetModel) {
+			File folder = path.toFile();
+			log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
+
+			ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
+			CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
+					netSkipModel);
+			poolTakeCensus.execute(censusTaker);
+			while (!poolTakeCensus.isQuiescent()) {
+				// psuedo join
+			} // while
+		} // for Target
+	}// doStart
 
 	private void doPrintResults() {
 	}
@@ -454,23 +470,7 @@ public class DeDup {
 		JButton btnTest = new JButton("test");
 		btnTest.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-
-				log.infof("available Processors = %d%n", PROCESSORS);
-
-				List<Path> netSkipModel = getNetSkip();
-				List<Path> netTargetModel = getNetTargets();
-				for (Path path : netTargetModel) {
-					File folder = path.toFile();
-					log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
-
-					ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
-					CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
-							netSkipModel);
-					poolTakeCensus.execute(censusTaker);
-					while (!poolTakeCensus.isQuiescent()) {
-						// psuedo join
-					} // while
-				} // for Target
+				doStart();
 			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest = new GridBagConstraints();

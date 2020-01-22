@@ -7,8 +7,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.RecursiveAction;
@@ -55,7 +53,7 @@ public class CensusTaker extends RecursiveAction {
 			return;
 		} // if we need to skip
 
-		log.infof("[CensusTaker.compute] folder = %s%n", folder.toString());
+//		log.infof("[CensusTaker.compute] folder = %s%n", folder.toString());
 		// process any directories
 
 		File[] directories = folder.listFiles(new FileFilter() {
@@ -97,7 +95,7 @@ public class CensusTaker extends RecursiveAction {
 			} else {
 				saveCatalog(catalogFile, listName, catalogCurrent);
 			} // if empty catalog
-			
+
 		} // if files not null
 	}// compute
 
@@ -109,10 +107,10 @@ public class CensusTaker extends RecursiveAction {
 		// String fileType = matcher.find()? matcher.group(1).toLowerCase():NONE;
 		matcher = patternTargets.matcher(fileType);
 		if (matcher.matches()) {
-			// log.infof("Target -> : %s%n", fullPath);
+
 			processTargetFile(file);
 		} else {
-			log.warnf("\t\tSkipped -> %s%n", fullPath);
+			//log.warnf("\t\tSkipped -> %s%n", fullPath);
 		} //
 	}// processFile
 
@@ -122,18 +120,16 @@ public class CensusTaker extends RecursiveAction {
 		if (catalogOriginal.containsKey(fileName)) {
 			hash = catalogOriginal.get(fileName);
 		} else {
-			hash = getCurrentTime();
+			hash = FileKey.getID(file.getAbsolutePath());
+			if (hash == null) {
+				log.errorf("Could not generate hash for %s%n", file.getAbsolutePath());
+			} // if hash is null
+
+			// hash = getCurrentTime();
 		} // if
 		catalogCurrent.put(fileName, hash);
 	}// processTargetFile
 
-	//////////////////////////////////////////////////////////////////////////
-	SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-	private String getCurrentTime() {
-		return formatter.format(new Date());
-	}// getCurrentTime
-		//////////////////////////////////////////////////////////////////////////
 
 	/* Catalog File Object Serialization */
 
@@ -147,7 +143,7 @@ public class CensusTaker extends RecursiveAction {
 			ois.close();
 			fis.close();
 		} catch (Exception e) {
-			log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+//			log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
 		} // try
 		return ans;
 	}// getCatalog
