@@ -2,14 +2,15 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.RecursiveAction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,7 +27,7 @@ public class CensusTaker extends RecursiveAction {
 	private String listName;
 	private Pattern patternTargets;
 	private List<Path> skipListModel;
-//	private DefaultListModel<File> skipListModel;
+	// private DefaultListModel<File> skipListModel;
 
 	private File catalogFile;
 	private HashMap<String, String> catalogOriginal;
@@ -84,8 +85,20 @@ public class CensusTaker extends RecursiveAction {
 			for (File file : files) {
 				processFile(file);
 			} // for each directory
-			saveCatalog(catalogFile, listName, catalogCurrent);
-		} // if files
+			catalogCurrent.isEmpty();
+
+			if (catalogCurrent.isEmpty()) {
+				try {
+					Files.deleteIfExists(catalogFile.toPath());
+				} catch (IOException e) {
+					log.warnf("Did not delete : %s%n", catalogFile.toPath());
+					e.printStackTrace();
+				} // try
+			} else {
+				saveCatalog(catalogFile, listName, catalogCurrent);
+			} // if empty catalog
+			
+		} // if files not null
 	}// compute
 
 	private void processFile(File file) {
@@ -120,7 +133,7 @@ public class CensusTaker extends RecursiveAction {
 	private String getCurrentTime() {
 		return formatter.format(new Date());
 	}// getCurrentTime
-	//////////////////////////////////////////////////////////////////////////
+		//////////////////////////////////////////////////////////////////////////
 
 	/* Catalog File Object Serialization */
 
@@ -140,10 +153,6 @@ public class CensusTaker extends RecursiveAction {
 	}// getCatalog
 
 	public void saveCatalog(File catalogFile, String listName, HashMap<String, String> catalog) {
-		Set<String> keys = catalog.keySet();
-		for (String key : keys) {
-			log.infof("Hash: %s , \tFile: %s%n", catalog.get(key), key);
-		} // for
 
 		try {
 			FileOutputStream fos = new FileOutputStream(catalogFile);

@@ -461,7 +461,7 @@ public class DeDup {
 				List<Path> netTargetModel = getNetTargets();
 				for (Path path : netTargetModel) {
 					File folder = path.toFile();
-					// File folder = targetListModel.elementAt(0);
+					log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
 
 					ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
 					CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
