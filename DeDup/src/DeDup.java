@@ -28,6 +28,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
@@ -49,6 +50,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
+import javax.swing.JTable;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
@@ -57,15 +59,25 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableRowSorter;
 import javax.swing.text.StyledDocument;
 
+//import identic.ActionTableModel;
 
 public class DeDup {
 
 	private AppLogger log = AppLogger.getInstance();
 	private AdapterDeDup adapterDeDup = new AdapterDeDup();
+
 	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
+
+	private TargetTableModel targetTableModel = new TargetTableModel();
+
+	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
+	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
+
 	private static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
 
 	private DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>();
@@ -74,9 +86,7 @@ public class DeDup {
 
 	private ButtonGroup mainGroup = new ButtonGroup();
 
-//	btnBoot.setIcon(
-//	new ImageIcon(Z80Machine.class.getResource("/Processor-48.png")));
-	
+
 	/**
 	 * Launch the application.
 	 */
@@ -111,6 +121,16 @@ public class DeDup {
 				// psuedo join
 			} // while
 		} // for Target
+		
+		targetTableModel.clear();
+		hashCounts.clear();
+		hashIDs.clear();
+		
+		File target = new File("C:\\Temp\\DeDupTest\\Test00\\Test10");
+		Meld meld = new Meld(target, lblActiveTypeFile.getText(), targetTableModel, hashCounts, hashIDs, netSkipModel);
+		meld.compute();
+		
+		mainTable.setModel(targetTableModel);
 	}// doStart
 
 	private void doPrintResults() {
@@ -139,6 +159,40 @@ public class DeDup {
 
 	private void doExcluded() {
 	}
+	
+	//////////////////////////////////////////////
+	private void setTableColumns() {
+		mainTable.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
+		for (int i = 0; i < mainTable.getColumnModel().getColumnCount(); i++) {
+			TableColumn tc = mainTable.getColumnModel().getColumn(i);
+			switch (i) {
+			case 0: // Action
+				tc.setMaxWidth(40);
+				tc.setPreferredWidth(40);
+				break;
+			case 1: // Name
+				break;
+			case 2: // Directory
+				break;
+			case 3: // Size
+				// tc.setMaxWidth(460);
+				tc.setPreferredWidth(40);
+				break;
+			case 4: // Date
+				// tc.setMaxWidth(100);
+				tc.setPreferredWidth(40);
+				break;
+			case 5: // Dup
+				tc.setMaxWidth(40);
+				break;
+			case 6: // ID
+				tc.setMaxWidth(40);
+				break;
+			default:
+				tc.setPreferredWidth(40);
+			}// switch
+		} // for each column
+	}// setTableColumns
 
 	private void setupActionButtons() {
 		setActionButtonsState(false);
@@ -337,6 +391,7 @@ public class DeDup {
 		} // try
 		return ans;
 	}// saveListModel
+///////////////////////////////////////////////////////////
 
 	private void saveListModel(DefaultListModel<File> listModel, String name) {
 		File file = new File(getAppDataDirectory(), name);
@@ -407,6 +462,9 @@ public class DeDup {
 		btnSkipRemove.setEnabled(false);
 
 		setupActionButtons();
+		setTableColumns();
+		mainTable.setRowSorter(new TableRowSorter<TargetTableModel>(targetTableModel));
+
 	}// appInit
 
 	public DeDup() {
@@ -418,7 +476,7 @@ public class DeDup {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		
+
 		frameDeDup = new JFrame();
 
 		frameDeDup.setTitle("DeDup -   version 0.0");
@@ -722,6 +780,9 @@ public class DeDup {
 		gbc_scrollPaneMajor.gridx = 0;
 		gbc_scrollPaneMajor.gridy = 0;
 		panelMajorWorkRight.add(scrollPaneMajor, gbc_scrollPaneMajor);
+		
+		mainTable = new JTable();
+		scrollPaneMajor.setViewportView(mainTable);
 
 		splitPaneTargets = new JSplitPane();
 		splitPaneTargets.setOrientation(JSplitPane.VERTICAL_SPLIT);
@@ -1218,6 +1279,7 @@ public class DeDup {
 	private JButton btnMove;
 	private JButton btnCopy;
 	private JPanel panelMWR2;
+	private JTable mainTable;
 
 	/* @formatter:on */
 

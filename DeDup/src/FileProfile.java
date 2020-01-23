@@ -2,7 +2,7 @@
 
 import java.io.Serializable;
 
-public class FileStat implements Serializable {
+public class FileProfile implements Serializable {
 	/**
 	 * 
 	 */
@@ -14,13 +14,13 @@ public class FileStat implements Serializable {
 	private String fileTime;
 	private String hashKey;
 
-	public FileStat(String filePath, long fileSize, String fileTime) {
-		this.filePath = filePath;
-		this.fileSize = fileSize;
-		this.fileTime = fileTime;
-	}// Constructor
+//	public FileStat(String filePath, long fileSize, String fileTime) {
+//		this.filePath = filePath;
+//		this.fileSize = fileSize;
+//		this.fileTime = fileTime;
+//	}// Constructor
 
-	public FileStat(String filePath, long fileSize, String fileTime, String hashKey) {
+	public FileProfile(String filePath, long fileSize, String fileTime, String hashKey) {
 		this.filePath = filePath;
 		this.fileSize = fileSize;
 		this.fileTime = fileTime;
