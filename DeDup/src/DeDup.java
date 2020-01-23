@@ -7,6 +7,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -58,6 +59,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.StyledDocument;
 
+
 public class DeDup {
 
 	private AppLogger log = AppLogger.getInstance();
@@ -72,6 +74,9 @@ public class DeDup {
 
 	private ButtonGroup mainGroup = new ButtonGroup();
 
+//	btnBoot.setIcon(
+//	new ImageIcon(Z80Machine.class.getResource("/Processor-48.png")));
+	
 	/**
 	 * Launch the application.
 	 */
@@ -413,6 +418,7 @@ public class DeDup {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
+		
 		frameDeDup = new JFrame();
 
 		frameDeDup.setTitle("DeDup -   version 0.0");
@@ -424,6 +430,8 @@ public class DeDup {
 				appClose();
 			}// windowClosing
 		});
+		frameDeDup.setIconImage(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png")));
+
 		frameDeDup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 0, 0 };
