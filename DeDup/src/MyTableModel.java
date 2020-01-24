@@ -31,6 +31,15 @@ public class MyTableModel extends AbstractTableModel {
 	public String getColumnName(int column) {
 		return column < columnCount ? headers[column] : EMPTY_STRING;
 	}// getColumnName
+	
+	public int getColumnIndex(String columnName) {
+		for (int i = 0 ; i < headers.length ; i ++) {
+			if (headers[i].equals(columnName)) {
+				return i;
+			}//
+		}//for
+		return -1;
+	}//getColumnIndex
 
 	@Override
 	synchronized public int getRowCount() {

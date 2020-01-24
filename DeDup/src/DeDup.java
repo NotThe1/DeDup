@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -75,8 +76,10 @@ public class DeDup {
 
 	private TargetTableModel targetTableModel = new TargetTableModel();
 
+	public static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
+	private Meld meld;
 
 	private static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
 
@@ -85,7 +88,6 @@ public class DeDup {
 	private Pattern patternTargets = null;
 
 	private ButtonGroup mainGroup = new ButtonGroup();
-
 
 	/**
 	 * Launch the application.
@@ -121,17 +123,63 @@ public class DeDup {
 				// psuedo join
 			} // while
 		} // for Target
-		
+
 		targetTableModel.clear();
 		hashCounts.clear();
 		hashIDs.clear();
-		
-		File target = new File("C:\\Temp\\DeDupTest\\Test00\\Test10");
-		Meld meld = new Meld(target, lblActiveTypeFile.getText(), targetTableModel, hashCounts, hashIDs, netSkipModel);
-		meld.compute();
-		
+		// Meld.clear();
+		fileID.set(0);
+
+		log.infof("%nStarted meld. Available Processors = %d%n", PROCESSORS);
+
+		for (Path path : netTargetModel) {
+			File folder = path.toFile();
+			// log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
+
+			ForkJoinPool poolMeld = new ForkJoinPool(PROCESSORS);
+			meld = new Meld(folder, lblActiveTypeFile.getText(), targetTableModel, hashCounts, hashIDs, netSkipModel);
+
+			// meld.compute();
+			poolMeld.execute(meld);
+			while (!poolMeld.isQuiescent()) {
+				// psuedo join
+			} // while
+		} // for Target
+
 		mainTable.setModel(targetTableModel);
+		setTableColumns();
+		
+		analyzeMainTable();
+		
+		setActionButtonsState(true);
 	}// doStart
+	
+	private void analyzeMainTable() {
+		int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+		int dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+		String hashKey;
+		int uniqueCount = 0;
+		int hashCount = 0;
+		for (int row = 0; row < targetTableModel.getRowCount(); row++) {
+			hashKey = (String) targetTableModel.getValueAt(row, hashIndex);
+
+			hashCount = hashCounts.get(hashKey);
+			if (hashCount == 1) {
+				uniqueCount++;
+			} else { // if (hashCount > 1)
+				targetTableModel.setValueAt(true, row, dupIndex);
+			} // if
+		} // for
+		int targetCount = targetTableModel.getRowCount();
+		setMainButtonTitle(btnTargets, targetCount);
+		int distinctCount = hashCounts.size();
+		setMainButtonTitle(btnDistinct, distinctCount);
+		setMainButtonTitle(btnUnique, uniqueCount);
+		int duplicateCounts = distinctCount - uniqueCount;
+		setMainButtonTitle(btnDuplicates, duplicateCounts);
+
+		mainTable.updateUI();
+	}//analyzeMainTable
 
 	private void doPrintResults() {
 	}
@@ -157,9 +205,6 @@ public class DeDup {
 	private void doDuplicates() {
 	}
 
-	private void doExcluded() {
-	}
-	
 	//////////////////////////////////////////////
 	private void setTableColumns() {
 		mainTable.setAutoResizeMode(JTable.AUTO_RESIZE_NEXT_COLUMN);
@@ -173,6 +218,8 @@ public class DeDup {
 			case 1: // Name
 				break;
 			case 2: // Directory
+				tc.setMinWidth(120);
+				tc.setPreferredWidth(220);
 				break;
 			case 3: // Size
 				// tc.setMaxWidth(460);
@@ -192,6 +239,7 @@ public class DeDup {
 				tc.setPreferredWidth(40);
 			}// switch
 		} // for each column
+		mainTable.setRowSorter(new TableRowSorter<TargetTableModel>(targetTableModel));
 	}// setTableColumns
 
 	private void setupActionButtons() {
@@ -391,7 +439,7 @@ public class DeDup {
 		} // try
 		return ans;
 	}// saveListModel
-///////////////////////////////////////////////////////////
+		///////////////////////////////////////////////////////////
 
 	private void saveListModel(DefaultListModel<File> listModel, String name) {
 		File file = new File(getAppDataDirectory(), name);
@@ -462,8 +510,7 @@ public class DeDup {
 		btnSkipRemove.setEnabled(false);
 
 		setupActionButtons();
-		setTableColumns();
-		mainTable.setRowSorter(new TableRowSorter<TargetTableModel>(targetTableModel));
+		// setTableColumns();
 
 	}// appInit
 
@@ -520,9 +567,9 @@ public class DeDup {
 		gbc_panelTop.gridy = 0;
 		panel.add(panelTop, gbc_panelTop);
 		GridBagLayout gbl_panelTop = new GridBagLayout();
-		gbl_panelTop.columnWidths = new int[] { 0, 0, 0 };
+		gbl_panelTop.columnWidths = new int[] { 0, 0, 0, 0 };
 		gbl_panelTop.rowHeights = new int[] { 0, 0 };
-		gbl_panelTop.columnWeights = new double[] { 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panelTop.columnWeights = new double[] { 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		gbl_panelTop.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		panelTop.setLayout(gbl_panelTop);
 
@@ -540,10 +587,46 @@ public class DeDup {
 			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest = new GridBagConstraints();
+		gbc_btnTest.insets = new Insets(0, 0, 0, 5);
 		gbc_btnTest.anchor = GridBagConstraints.NORTH;
 		gbc_btnTest.gridx = 1;
 		gbc_btnTest.gridy = 0;
 		panelTop.add(btnTest, gbc_btnTest);
+
+		JButton btnTest1 = new JButton("Test 1");
+		btnTest1.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+				int dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+				String hashKey;
+				int uniqueCount = 0;
+				int hashCount = 0;
+				for (int row = 0; row < targetTableModel.getRowCount(); row++) {
+					hashKey = (String) targetTableModel.getValueAt(row, hashIndex);
+
+					hashCount = hashCounts.get(hashKey);
+					if (hashCount == 1) {
+						uniqueCount++;
+					} else { // if (hashCount > 1)
+						targetTableModel.setValueAt(true, row, dupIndex);
+					} // if
+				} // for
+				int targetCount = targetTableModel.getRowCount();
+				setMainButtonTitle(btnTargets, targetCount);
+				int distinctCount = hashCounts.size();
+				setMainButtonTitle(btnDistinct, distinctCount);
+				setMainButtonTitle(btnUnique, uniqueCount);
+				int duplicateCounts = distinctCount - uniqueCount;
+				setMainButtonTitle(btnDuplicates, duplicateCounts);
+
+				mainTable.updateUI();
+			}// actionPerformed
+		});
+		GridBagConstraints gbc_btnTest1 = new GridBagConstraints();
+		gbc_btnTest1.anchor = GridBagConstraints.NORTH;
+		gbc_btnTest1.gridx = 2;
+		gbc_btnTest1.gridy = 0;
+		panelTop.add(btnTest1, gbc_btnTest1);
 
 		JPanel panelMain = new JPanel();
 		GridBagConstraints gbc_panelMain = new GridBagConstraints();
@@ -642,9 +725,9 @@ public class DeDup {
 		panelMajorWorkLeft.add(panelMWR2, gbc_panelMWR2);
 		GridBagLayout gbl_panelMWR2 = new GridBagLayout();
 		gbl_panelMWR2.columnWidths = new int[] { 0, 0 };
-		gbl_panelMWR2.rowHeights = new int[] { 20, 0, 20, 0, 10, 0, 10, 0, 10, 0, 10, 0, 5, 0 };
+		gbl_panelMWR2.rowHeights = new int[] { 20, 0, 20, 0, 10, 0, 10, 0, 10, 0, 5, 0 };
 		gbl_panelMWR2.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panelMWR2.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+		gbl_panelMWR2.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 				Double.MIN_VALUE };
 		panelMWR2.setLayout(gbl_panelMWR2);
 
@@ -698,16 +781,6 @@ public class DeDup {
 		gbc_btnDuplicates.gridx = 0;
 		gbc_btnDuplicates.gridy = 9;
 		panelMWR2.add(btnDuplicates, gbc_btnDuplicates);
-
-		btnExcluded = new JToggleButton("Excluded");
-		btnExcluded.setName("Excluded");
-		btnExcluded.setActionCommand(BTN_EXCLUDED);
-		GridBagConstraints gbc_btnExcluded = new GridBagConstraints();
-		gbc_btnExcluded.fill = GridBagConstraints.HORIZONTAL;
-		gbc_btnExcluded.insets = new Insets(0, 0, 5, 0);
-		gbc_btnExcluded.gridx = 0;
-		gbc_btnExcluded.gridy = 11;
-		panelMWR2.add(btnExcluded, gbc_btnExcluded);
 
 		Component verticalStrut_21 = Box.createVerticalStrut(20);
 		GridBagConstraints gbc_verticalStrut_21 = new GridBagConstraints();
@@ -780,7 +853,7 @@ public class DeDup {
 		gbc_scrollPaneMajor.gridx = 0;
 		gbc_scrollPaneMajor.gridy = 0;
 		panelMajorWorkRight.add(scrollPaneMajor, gbc_scrollPaneMajor);
-		
+
 		mainTable = new JTable();
 		scrollPaneMajor.setViewportView(mainTable);
 
@@ -1145,9 +1218,6 @@ public class DeDup {
 			case BTN_DUPLICATES:
 				doDuplicates();
 				break;
-			case BTN_EXCLUDED:
-				doExcluded();
-				break;
 
 			case BTN_TARGET_ADD:
 				doAddFolder(targetListModel);
@@ -1264,7 +1334,7 @@ public class DeDup {
 
 	public final static String TYPEFILE = ".typeFile";
 	private final static String PATH_SEPARATOR = File.separator;
-	/* @formatter:off */
+
 	private static final String[] INITIAL_LISTFILES = new String[] { "VB" + TYPEFILE, "Music" + TYPEFILE,
 			"MusicAndPictures" + TYPEFILE, "Pictures" + TYPEFILE };
 	private JLabel lblActiveTypeFile;
@@ -1274,13 +1344,10 @@ public class DeDup {
 	private JToggleButton btnDistinct;
 	private JToggleButton btnUnique;
 	private JToggleButton btnDuplicates;
-	private JToggleButton btnExcluded;
 	private JButton btnDelete;
 	private JButton btnMove;
 	private JButton btnCopy;
 	private JPanel panelMWR2;
 	private JTable mainTable;
-
-	/* @formatter:on */
 
 }// class DeDup

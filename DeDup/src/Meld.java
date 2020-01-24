@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RecursiveAction;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class Meld extends RecursiveAction {
 	private static final long serialVersionUID = 1L;
@@ -18,7 +17,6 @@ public class Meld extends RecursiveAction {
 	private File folder;
 	private String listName;
 	private TargetTableModel targetTableModel;
-	private static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs;
 	private ConcurrentHashMap<String, Integer> hashCounts;
 	private List<Path> skipListModel;
@@ -39,6 +37,7 @@ public class Meld extends RecursiveAction {
 	@SuppressWarnings("unchecked")
 	@Override
 	protected void compute() {
+//		System.out.printf("[Meld.compute] fileID = %d%n",DeDup.fileID.get());
 		if (skipListModel.contains(folder.toPath())) {
 			log.infof("[Meld.compute] skipping: %s%n", folder);
 			return;
@@ -55,7 +54,7 @@ public class Meld extends RecursiveAction {
 		/* process any & all sub directories */
 		if (directories != null) {
 			for (File directory : directories) {
-				new Meld(folder, listName, targetTableModel, hashCounts, hashIDs, skipListModel).fork();
+				new Meld(directory, listName, targetTableModel, hashCounts, hashIDs, skipListModel).fork();
 			} // for each directory
 		} // if directories
 
@@ -78,25 +77,20 @@ public class Meld extends RecursiveAction {
 			return;
 		} // if
 
-		// Set<String> keys = profiles.keySet();
 		String hashKey;
-		long size = -1;
-		int ID = -1;
 		Collection<FileProfile> profiles = catalog.values();
 		for (FileProfile profile : profiles) {
 			hashKey = profile.getHashKey();
 			synchronized (idLock) {
-				if (!hashCounts.contains(hashKey)) {
+				if (!hashCounts.containsKey(hashKey)) {
 					hashCounts.put(hashKey, 0);
-					hashIDs.put(hashKey, fileID.getAndIncrement());
+					hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());
 				} // if new hashKey
 				
+			} // synchronized (idLock)
 				hashCounts.put(hashKey, hashCounts.get(hashKey)+ 1);
 				targetTableModel.addRow(profile, hashIDs.get(hashKey));
-			} // synchronized (idLock)
-
 		} // for each
-
 	}// compute
-
+	
 }// class Meld
