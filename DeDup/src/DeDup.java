@@ -25,8 +25,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
@@ -54,6 +56,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
+import javax.swing.RowFilter;
 import javax.swing.SwingConstants;
 import javax.swing.border.BevelBorder;
 import javax.swing.border.EtchedBorder;
@@ -148,12 +151,12 @@ public class DeDup {
 
 		mainTable.setModel(targetTableModel);
 		setTableColumns();
-		
+
 		analyzeMainTable();
-		
+
 		setActionButtonsState(true);
 	}// doStart
-	
+
 	private void analyzeMainTable() {
 		int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
 		int dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
@@ -179,7 +182,7 @@ public class DeDup {
 		setMainButtonTitle(btnDuplicates, duplicateCounts);
 
 		mainTable.updateUI();
-	}//analyzeMainTable
+	}// analyzeMainTable
 
 	private void doPrintResults() {
 	}
@@ -193,17 +196,29 @@ public class DeDup {
 	private void doDelete() {
 	}
 
+	private void filterTargetTable(RowFilter filter) {
+		if (mainTable.getRowCount() > 0) {
+			TableRowSorter<TargetTableModel> tableRowSorter = new TableRowSorter<TargetTableModel>(targetTableModel);
+			tableRowSorter.setRowFilter(filter);
+			mainTable.setRowSorter(tableRowSorter);
+		} // if rows
+	}// filterTable
+
 	private void doTargets() {
-	}
+		mainTable.setRowSorter(null);
+	}// doTargets
 
 	private void doDistinct() {
-	}
+		filterTargetTable(new DistinctFilter());
+	}// doDistinct
 
 	private void doUnique() {
-	}
+		filterTargetTable(new UniqueFilter());
+	}// doUnique
 
 	private void doDuplicates() {
-	}
+		filterTargetTable(new DuplicateFilter());
+	}// doDuplicates
 
 	//////////////////////////////////////////////
 	private void setTableColumns() {
@@ -596,30 +611,30 @@ public class DeDup {
 		JButton btnTest1 = new JButton("Test 1");
 		btnTest1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
-				int dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
-				String hashKey;
-				int uniqueCount = 0;
-				int hashCount = 0;
-				for (int row = 0; row < targetTableModel.getRowCount(); row++) {
-					hashKey = (String) targetTableModel.getValueAt(row, hashIndex);
+				if (mainTable.getRowCount() > 0) {
+					// -------------------------------------------
+					// RowFilter<Object,Object> ditinctFilter = new RowFilter<Object,Object>(){
+					// AbstractSet<String> hashIDs = new HashSet<String>();
+					// int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+					//
+					// @Override
+					// public boolean include(Entry<? extends Object, ? extends Object> entry) {
+					// String hashID = (String) entry.getValue(hashIndex);
+					// if (hashIDs.contains(hashID)) {
+					// return false;
+					// } else
+					// hashIDs.add(hashID);
+					// return true;
+					// }//include
+					// };
+					// -------------------------------------------
+					DistinctFilter filter = new DistinctFilter();
 
-					hashCount = hashCounts.get(hashKey);
-					if (hashCount == 1) {
-						uniqueCount++;
-					} else { // if (hashCount > 1)
-						targetTableModel.setValueAt(true, row, dupIndex);
-					} // if
-				} // for
-				int targetCount = targetTableModel.getRowCount();
-				setMainButtonTitle(btnTargets, targetCount);
-				int distinctCount = hashCounts.size();
-				setMainButtonTitle(btnDistinct, distinctCount);
-				setMainButtonTitle(btnUnique, uniqueCount);
-				int duplicateCounts = distinctCount - uniqueCount;
-				setMainButtonTitle(btnDuplicates, duplicateCounts);
-
-				mainTable.updateUI();
+					TableRowSorter<TargetTableModel> tableRowSorter = new TableRowSorter<TargetTableModel>(
+							targetTableModel);
+					tableRowSorter.setRowFilter(filter);
+					mainTable.setRowSorter(tableRowSorter);
+				} // if rows
 			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest1 = new GridBagConstraints();
@@ -742,6 +757,7 @@ public class DeDup {
 		panelMWR2.add(lblTotalFiles, gbc_lblTotalFiles);
 
 		btnTargets = new JToggleButton("Targets");
+		btnTargets.addActionListener(adapterDeDup);
 		btnTargets.setName("Targets");
 		btnTargets.setActionCommand(BTN_TARGETS);
 		GridBagConstraints gbc_btnTargets = new GridBagConstraints();
@@ -752,6 +768,7 @@ public class DeDup {
 		panelMWR2.add(btnTargets, gbc_btnTargets);
 
 		btnDistinct = new JToggleButton("Distinct");
+		btnDistinct.addActionListener(adapterDeDup);
 		btnDistinct.setName("Distinct");
 		btnDistinct.setActionCommand(BTN_DISTINCT);
 		GridBagConstraints gbc_btnDistinct = new GridBagConstraints();
@@ -763,6 +780,7 @@ public class DeDup {
 		panelMWR2.add(btnDistinct, gbc_btnDistinct);
 
 		btnUnique = new JToggleButton("Unique");
+		btnUnique.addActionListener(adapterDeDup);
 		btnUnique.setName("Unique");
 		btnUnique.setActionCommand(BTN_UNIQUE);
 		GridBagConstraints gbc_btnUnique = new GridBagConstraints();
@@ -773,6 +791,7 @@ public class DeDup {
 		panelMWR2.add(btnUnique, gbc_btnUnique);
 
 		btnDuplicates = new JToggleButton("Duplicates");
+		btnDuplicates.addActionListener(adapterDeDup);
 		btnDuplicates.setName("Duplicates");
 		btnDuplicates.setActionCommand(BTN_DUPLICATES);
 		GridBagConstraints gbc_btnDuplicates = new GridBagConstraints();
@@ -1349,5 +1368,71 @@ public class DeDup {
 	private JButton btnCopy;
 	private JPanel panelMWR2;
 	private JTable mainTable;
+	// -------------------------------------------
+	RowFilter<Object, Object> ditinctFilter = new RowFilter<Object, Object>() {
+		AbstractSet<String> hashIDs = new HashSet<String>();
+		int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+
+		@Override
+		public boolean include(Entry<? extends Object, ? extends Object> entry) {
+			String hashID = (String) entry.getValue(hashIndex);
+			if (hashIDs.contains(hashID)) {
+				return false;
+			} else
+				hashIDs.add(hashID);
+			return true;
+		}// include
+	};
+
+	// ============================================
+	class DistinctFilter extends RowFilter {
+		int hashIndex;
+		AbstractSet<String> hashIDs;
+
+		public DistinctFilter() {
+			this.hashIDs = new HashSet<String>();
+			this.hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+
+		}// constructor
+
+		@Override
+		public boolean include(Entry entry) {
+			String hashID = (String) entry.getValue(hashIndex);
+			if (hashIDs.contains(hashID)) {
+				return false;
+			} else
+				hashIDs.add(hashID);
+			return true;
+		}// include
+	}// class DistinctFilter
+		// -------------------------------------------
+
+	class UniqueFilter extends RowFilter {
+		int dupIndex;
+
+		UniqueFilter() {
+			dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+		}// constructor
+
+		@Override
+		public boolean include(Entry entry) {
+			return !((boolean) entry.getValue(dupIndex));
+		}// include
+	}// class UniqueFilter
+		// -------------------------------------------
+
+	class DuplicateFilter extends RowFilter {
+		int dupIndex;
+
+		DuplicateFilter() {
+			dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+		}// constructor
+
+		@Override
+		public boolean include(Entry entry) {
+			return ((boolean) entry.getValue(dupIndex));
+		}// include
+	}// class DuplicateFilter
+		// ============================================
 
 }// class DeDup
