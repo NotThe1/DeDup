@@ -15,9 +15,11 @@ import java.awt.event.ItemListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -25,15 +27,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.text.Format;
+import java.text.SimpleDateFormat;
 import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.prefs.Preferences;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -84,6 +92,11 @@ public class DeDup {
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
 	private Meld meld;
 
+	List<Path> netSkipModel;
+	List<Path> netTargetModel;
+	String activeList;
+	// String catalogFilePostFix;
+
 	private static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
 
 	private DefaultComboBoxModel<String> modelTypeFiles = new DefaultComboBoxModel<String>();
@@ -110,19 +123,16 @@ public class DeDup {
 	/*                                                   */
 
 	private void doStart() {
-		log.infof("%nStarted census. Available Processors = %d%n", PROCESSORS);
-
-		List<Path> netSkipModel = getNetSkip();
-		List<Path> netTargetModel = getNetTargets();
+		log.infof("%nStarted Updating Catalogs. Available Processors = %d%n", PROCESSORS);
+		activeList = lblActiveTypeFile.getText();
+		netSkipModel = getNetSkip();
+		netTargetModel = getNetTargets();
 		for (Path path : netTargetModel) {
 			File folder = path.toFile();
 			log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
-
-			ForkJoinPool poolTakeCensus = new ForkJoinPool(PROCESSORS);
-			CensusTaker censusTaker = new CensusTaker(folder, lblActiveTypeFile.getText(), patternTargets,
-					netSkipModel);
-			poolTakeCensus.execute(censusTaker);
-			while (!poolTakeCensus.isQuiescent()) {
+			ForkJoinPool poolUpdateCatalog = new ForkJoinPool(PROCESSORS);
+			poolUpdateCatalog.execute(new UpdateCatalog(folder));
+			while (!poolUpdateCatalog.isQuiescent()) {
 				// psuedo join
 			} // while
 		} // for Target
@@ -133,21 +143,16 @@ public class DeDup {
 		// Meld.clear();
 		fileID.set(0);
 
-		log.infof("%nStarted meld. Available Processors = %d%n", PROCESSORS);
-
+		log.infof("%nStarted Unify. Available Processors = %d%n", PROCESSORS);
 		for (Path path : netTargetModel) {
 			File folder = path.toFile();
-			// log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
 
-			ForkJoinPool poolMeld = new ForkJoinPool(PROCESSORS);
-			meld = new Meld(folder, lblActiveTypeFile.getText(), targetTableModel, hashCounts, hashIDs, netSkipModel);
-
-			// meld.compute();
-			poolMeld.execute(meld);
-			while (!poolMeld.isQuiescent()) {
+			ForkJoinPool poolUnify = new ForkJoinPool(PROCESSORS);
+			poolUnify.execute(new Unify(folder));
+			while (!poolUnify.isQuiescent()) {
 				// psuedo join
 			} // while
-		} // for Target
+		} // for each
 
 		mainTable.setModel(targetTableModel);
 		setTableColumns();
@@ -196,10 +201,11 @@ public class DeDup {
 	private void doDelete() {
 	}
 
-	private void filterTargetTable(RowFilter filter) {
+	@SuppressWarnings("unchecked")
+	private void filterTargetTable(RowFilter<?, ?> filter) {
 		if (mainTable.getRowCount() > 0) {
 			TableRowSorter<TargetTableModel> tableRowSorter = new TableRowSorter<TargetTableModel>(targetTableModel);
-			tableRowSorter.setRowFilter(filter);
+			tableRowSorter.setRowFilter((RowFilter<? super TargetTableModel, ? super Integer>) filter);
 			mainTable.setRowSorter(tableRowSorter);
 		} // if rows
 	}// filterTable
@@ -385,7 +391,7 @@ public class DeDup {
 	}// loadTargetRegex
 
 	private void doEditTypeFiles() {
-		String activeList = (String) modelTypeFiles.getSelectedItem();
+		activeList = (String) modelTypeFiles.getSelectedItem();
 		TypeFileMaintenance tfm = new TypeFileMaintenance(frameDeDup, this);
 		tfm.setLocationRelativeTo(frameDeDup);
 		tfm.setVisible(true);
@@ -440,6 +446,7 @@ public class DeDup {
 	 * Create the application.
 	 */
 
+	@SuppressWarnings("unchecked")
 	private DefaultListModel<File> getListModel(String name) {
 		File file = new File(getAppDataDirectory(), name);
 		DefaultListModel<File> ans = new DefaultListModel<File>();
@@ -612,22 +619,7 @@ public class DeDup {
 		btnTest1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				if (mainTable.getRowCount() > 0) {
-					// -------------------------------------------
-					// RowFilter<Object,Object> ditinctFilter = new RowFilter<Object,Object>(){
-					// AbstractSet<String> hashIDs = new HashSet<String>();
-					// int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
-					//
-					// @Override
-					// public boolean include(Entry<? extends Object, ? extends Object> entry) {
-					// String hashID = (String) entry.getValue(hashIndex);
-					// if (hashIDs.contains(hashID)) {
-					// return false;
-					// } else
-					// hashIDs.add(hashID);
-					// return true;
-					// }//include
-					// };
-					// -------------------------------------------
+
 					DistinctFilter filter = new DistinctFilter();
 
 					TableRowSorter<TargetTableModel> tableRowSorter = new TableRowSorter<TargetTableModel>(
@@ -1297,7 +1289,8 @@ public class DeDup {
 
 		@Override
 		public void itemStateChanged(ItemEvent itemEvent) {
-			String actionCommand = ((JComboBox) itemEvent.getSource()).getActionCommand();
+			@SuppressWarnings("unchecked")
+			String actionCommand = ((JComboBox<String>) itemEvent.getSource()).getActionCommand();
 			switch (actionCommand) {
 			case CB_TYPE_FILE:
 				if (itemEvent.getStateChange() == ItemEvent.SELECTED) {
@@ -1321,7 +1314,19 @@ public class DeDup {
 	private JList<File> listSkip;
 	private JButton btnTargetRemove;
 	private JButton btnSkipRemove;
-	private JComboBox cbTypeFiles;
+	private JComboBox<String> cbTypeFiles;
+	private JLabel lblActiveTypeFile;
+	private JTabbedPane tabbedPane;
+	private JLabel lblTotalFiles;
+	private JToggleButton btnTargets;
+	private JToggleButton btnDistinct;
+	private JToggleButton btnUnique;
+	private JToggleButton btnDuplicates;
+	private JButton btnDelete;
+	private JButton btnMove;
+	private JButton btnCopy;
+	private JPanel panelMWR2;
+	private JTable mainTable;
 
 	private final static String BTN_TARGET_ADD = "btnTargetAdd";
 	private final static String BTN_TARGET_REMOVE = "btnTargetRemove";
@@ -1342,7 +1347,6 @@ public class DeDup {
 	private final static String BTN_DISTINCT = "btnDistinct";
 	private final static String BTN_UNIQUE = "btnUnique";
 	private final static String BTN_DUPLICATES = "btnDuplicates";
-	private final static String BTN_EXCLUDED = "btnExcluded";
 
 	private final static String CB_TYPE_FILE = "cbTypeFile";
 
@@ -1352,40 +1356,31 @@ public class DeDup {
 	private final static String LIST_SKIP = "listSkip";
 
 	public final static String TYPEFILE = ".typeFile";
-	private final static String PATH_SEPARATOR = File.separator;
+	// private final static String PATH_SEPARATOR = File.separator;
+	private String LIST_PREFIX = ".deDup.";
+	private final static String NONE = "<none>";
 
 	private static final String[] INITIAL_LISTFILES = new String[] { "VB" + TYPEFILE, "Music" + TYPEFILE,
 			"MusicAndPictures" + TYPEFILE, "Pictures" + TYPEFILE };
-	private JLabel lblActiveTypeFile;
-	private JTabbedPane tabbedPane;
-	private JLabel lblTotalFiles;
-	private JToggleButton btnTargets;
-	private JToggleButton btnDistinct;
-	private JToggleButton btnUnique;
-	private JToggleButton btnDuplicates;
-	private JButton btnDelete;
-	private JButton btnMove;
-	private JButton btnCopy;
-	private JPanel panelMWR2;
-	private JTable mainTable;
+
 	// -------------------------------------------
-	RowFilter<Object, Object> ditinctFilter = new RowFilter<Object, Object>() {
-		AbstractSet<String> hashIDs = new HashSet<String>();
-		int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
-
-		@Override
-		public boolean include(Entry<? extends Object, ? extends Object> entry) {
-			String hashID = (String) entry.getValue(hashIndex);
-			if (hashIDs.contains(hashID)) {
-				return false;
-			} else
-				hashIDs.add(hashID);
-			return true;
-		}// include
-	};
-
+	// RowFilter<Object, Object> ditinctFilter = new RowFilter<Object, Object>() {
+	// AbstractSet<String> hashIDs = new HashSet<String>();
+	// int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+	//
+	// @Override
+	// public boolean include(Entry<? extends Object, ? extends Object> entry) {
+	// String hashID = (String) entry.getValue(hashIndex);
+	// if (hashIDs.contains(hashID)) {
+	// return false;
+	// } else
+	// hashIDs.add(hashID);
+	// return true;
+	// }// include
+	// };
+	//
 	// ============================================
-	class DistinctFilter extends RowFilter {
+	class DistinctFilter extends RowFilter<Object, Object> {
 		int hashIndex;
 		AbstractSet<String> hashIDs;
 
@@ -1396,7 +1391,7 @@ public class DeDup {
 		}// constructor
 
 		@Override
-		public boolean include(Entry entry) {
+		public boolean include(Entry<?, ?> entry) {
 			String hashID = (String) entry.getValue(hashIndex);
 			if (hashIDs.contains(hashID)) {
 				return false;
@@ -1407,7 +1402,7 @@ public class DeDup {
 	}// class DistinctFilter
 		// -------------------------------------------
 
-	class UniqueFilter extends RowFilter {
+	class UniqueFilter extends RowFilter<Object, Object> {
 		int dupIndex;
 
 		UniqueFilter() {
@@ -1415,13 +1410,13 @@ public class DeDup {
 		}// constructor
 
 		@Override
-		public boolean include(Entry entry) {
+		public boolean include(Entry<?, ?> entry) {
 			return !((boolean) entry.getValue(dupIndex));
 		}// include
 	}// class UniqueFilter
 		// -------------------------------------------
 
-	class DuplicateFilter extends RowFilter {
+	class DuplicateFilter extends RowFilter<Object, Object> {
 		int dupIndex;
 
 		DuplicateFilter() {
@@ -1429,10 +1424,221 @@ public class DeDup {
 		}// constructor
 
 		@Override
-		public boolean include(Entry entry) {
+		public boolean include(Entry<?, ?> entry) {
 			return ((boolean) entry.getValue(dupIndex));
 		}// include
 	}// class DuplicateFilter
+
+	// ============================================
+
+	private static final Object idLock = new Object();
+
+	class Unify extends RecursiveAction {
+		private static final long serialVersionUID = 1L;
+
+		File folder;
+
+		public Unify(File folder) {
+			this.folder = folder;
+		}// constructor
+
+		@SuppressWarnings("unchecked")
+		@Override
+		protected void compute() {
+			if (netSkipModel.contains(folder.toPath())) {
+				log.infof("[Meld.compute] skipping: %s%n", folder);
+				return;
+			} // if we need to skip
+
+			/* Find all the sub directories in this directory */
+			File[] directories = folder.listFiles(new FileFilter() {
+				@Override
+				public boolean accept(File fileContent) {
+					return fileContent.isDirectory();
+				}// accept
+			});
+
+			/* process any & all sub directories */
+			if (directories != null) {
+				for (File directory : directories) {
+					new Unify(directory).fork();
+				} // for each directory
+			} // if directories
+
+			/* Find the catalog in this directory */
+			File catalogFile = new File(folder, LIST_PREFIX + activeList);
+			log.infof("[Meld.compute] catalogFile: %s%n", catalogFile);
+			HashMap<String, FileProfile> catalog = new HashMap<String, FileProfile>();
+			try {
+				FileInputStream fis = new FileInputStream(catalogFile);
+				ObjectInputStream ois = new ObjectInputStream(fis);
+				catalog = (HashMap<String, FileProfile>) ois.readObject();
+				ois.close();
+				fis.close();
+			} catch (Exception e) {
+				// log.infof("Could not get catalog for : " +
+				// catalogFile.getParentFile().toString());
+			} // try
+
+			if (catalog.isEmpty()) {
+				return;
+			} // if
+
+			/* process the catalog */
+			String hashKey;
+			Collection<FileProfile> profiles = catalog.values();
+
+			for (FileProfile profile : profiles) {
+				hashKey = profile.getHashKey();
+				synchronized (idLock) {
+					if (!hashCounts.containsKey(hashKey)) {
+						hashCounts.put(hashKey, 0);
+						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());
+					} // if new hashKey
+
+				} // synchronized (idLock)
+				hashCounts.put(hashKey, hashCounts.get(hashKey) + 1);
+				targetTableModel.addRow(profile, hashIDs.get(hashKey));
+			} // for each
+
+		}// compute
+
+	}// class Unify
+
+	// ============================================
+	private static Format myFormat = new SimpleDateFormat("yyyy-MM-dd  HH:mm:ss");
+	private Pattern patternFileType = Pattern.compile("\\.([^.]+$)");
+
+	class UpdateCatalog extends RecursiveAction {
+		private static final long serialVersionUID = 1L;
+		private HashMap<String, FileProfile> catalogOriginal;
+		private HashMap<String, FileProfile> catalogCurrent;
+		private File catalogFile;
+		File folder;
+
+		UpdateCatalog(File folder) {
+			this.folder = folder; // File catalogFile = new File(folder, LIST_PREFIX + activeList);
+
+			this.catalogFile = new File(folder, LIST_PREFIX + activeList);
+			this.catalogOriginal = getCatalog(catalogFile);
+			this.catalogCurrent = new HashMap<String, FileProfile>();
+
+		}// Constructor
+
+		@Override
+		protected void compute() {
+			if (skipListModel.contains(folder.toPath())) {
+				log.infof("[CensusTaker.compute] skipping: %s%n", folder);
+				return;
+			} // if we need to skip
+
+			/* Find all the sub directories in this directory */
+			File[] directories = folder.listFiles(new FileFilter() {
+				@Override
+				public boolean accept(File fileContent) {
+					return fileContent.isDirectory();
+				}// accept
+			});
+
+			/* process any & all sub directories */
+			if (directories != null) {
+				for (File directory : directories) {
+					new UpdateCatalog(directory).fork();
+				} // for each directory
+			} // if directories
+
+			/* Find all the files in this directory */
+			File[] files = folder.listFiles(new FileFilter() {
+				@Override
+				public boolean accept(File fileContent) {
+					return fileContent.isFile();
+				}// accept
+			});
+
+			/* Process any & all files in this directory */
+			if (files != null) {
+				for (File file : files) {
+					if (isTarget(file)) {
+						processTargetFile(file);
+					} // if target
+				} // for each directory
+
+				if (catalogCurrent.isEmpty()) {
+					try {
+						Files.deleteIfExists(catalogFile.toPath());
+					} catch (IOException e) {
+						log.warnf("Did not delete : %s%n", catalogFile.toPath());
+						e.printStackTrace();
+					} // try
+				} else {
+					saveCatalog(catalogFile, catalogCurrent);
+				} // if empty catalog
+			} // if files not null
+
+		}// compute
+
+		@SuppressWarnings("unchecked")
+		public HashMap<String, FileProfile> getCatalog(File catalogFile) {
+			HashMap<String, FileProfile> ans = new HashMap<String, FileProfile>();
+			try {
+				FileInputStream fis = new FileInputStream(catalogFile);
+				ObjectInputStream ois = new ObjectInputStream(fis);
+				ans = (HashMap<String, FileProfile>) ois.readObject();
+				ois.close();
+				fis.close();
+			} catch (Exception e) {
+				// log.infof("Could not get catalog for : " +
+				// catalogFile.getParentFile().toString());
+			} // try
+			return ans;
+		}// getCatalog
+
+		public void saveCatalog(File catalogFile, HashMap<String, FileProfile> catalog) {
+			try {
+				FileOutputStream fos = new FileOutputStream(catalogFile);
+				ObjectOutputStream oos = new ObjectOutputStream(fos);
+				oos.writeObject(catalog);
+				fos.close();
+				oos.close();
+			} catch (Exception e) {
+				log.infof("Could not write catalog for : " + catalogFile.getParentFile().toString());
+			} // try
+			return;
+		}// getCatalog
+
+		private void processTargetFile(File file) {
+			String fileName = file.getName();
+			String hash;
+			if (catalogOriginal.containsKey(fileName)) {
+				catalogCurrent.put(fileName, catalogOriginal.get(fileName));
+			} else {
+				String filePath = file.getAbsolutePath();
+				long fileSize = file.length();
+				String lastModified = myFormat.format(file.lastModified());
+
+				hash = FileKey.getID(file.getAbsolutePath());
+				if (hash == null) {
+					log.errorf("Could not generate hash for %s%n", file.getAbsolutePath());
+				} // if hash is null
+				catalogCurrent.put(fileName, new FileProfile(filePath, fileSize, lastModified, hash));
+			} // if
+		}// processTargetFile
+
+		private boolean isTarget(File file) {
+			String fileName = file.getName();
+			Matcher matcher = patternFileType.matcher(fileName);
+			String fileType = matcher.find() ? matcher.group(1).toUpperCase().trim() : NONE;
+			// String fileType = matcher.find()? matcher.group(1).toLowerCase():NONE;
+			matcher = patternTargets.matcher(fileType);
+			if (matcher.matches()) {
+				return true;
+			} else {
+				return false;
+			} // if
+		}// isTarget
+
+	}// class UpdateCatalog
+		// ============================================
 		// ============================================
 
 }// class DeDup
