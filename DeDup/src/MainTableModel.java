@@ -7,10 +7,10 @@ import java.nio.file.Paths;
  * 
  *
  */
-public class TargetTableModel extends MyTableModel {
+public class MainTableModel extends MyTableModel {
 	private static final long serialVersionUID = 1L;
 
-	public TargetTableModel() {
+	public MainTableModel() {
 		super(new String[] { ACTION, NAME, DIRECTORY, SIZE, DATE, DUP, ID, HASH_KEY });
 	}// Constructor
 

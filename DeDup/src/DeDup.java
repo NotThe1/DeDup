@@ -12,6 +12,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -23,7 +25,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -35,7 +41,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
@@ -57,7 +67,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTabbedPane;
@@ -85,17 +97,16 @@ public class DeDup {
 	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
 
-	private TargetTableModel targetTableModel = new TargetTableModel();
+	private MainTableModel mainTableModel = new MainTableModel();
 
 	public static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
-	private Meld meld;
 
 	List<Path> netSkipModel;
 	List<Path> netTargetModel;
 	String activeList;
-	// String catalogFilePostFix;
+	String copyMoveDirectory = EMPTY_STRING;
 
 	private static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
 
@@ -137,7 +148,7 @@ public class DeDup {
 			} // while
 		} // for Target
 
-		targetTableModel.clear();
+		mainTableModel.clear();
 		hashCounts.clear();
 		hashIDs.clear();
 		// Meld.clear();
@@ -154,7 +165,7 @@ public class DeDup {
 			} // while
 		} // for each
 
-		mainTable.setModel(targetTableModel);
+		mainTable.setModel(mainTableModel);
 		setTableColumns();
 
 		analyzeMainTable();
@@ -163,22 +174,22 @@ public class DeDup {
 	}// doStart
 
 	private void analyzeMainTable() {
-		int hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
-		int dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+		int hashIndex = mainTableModel.getColumnIndex(MainTableModel.HASH_KEY);
+		int dupIndex = mainTableModel.getColumnIndex(MainTableModel.DUP);
 		String hashKey;
 		int uniqueCount = 0;
 		int hashCount = 0;
-		for (int row = 0; row < targetTableModel.getRowCount(); row++) {
-			hashKey = (String) targetTableModel.getValueAt(row, hashIndex);
+		for (int row = 0; row < mainTableModel.getRowCount(); row++) {
+			hashKey = (String) mainTableModel.getValueAt(row, hashIndex);
 
 			hashCount = hashCounts.get(hashKey);
 			if (hashCount == 1) {
 				uniqueCount++;
 			} else { // if (hashCount > 1)
-				targetTableModel.setValueAt(true, row, dupIndex);
+				mainTableModel.setValueAt(true, row, dupIndex);
 			} // if
 		} // for
-		int targetCount = targetTableModel.getRowCount();
+		int targetCount = mainTableModel.getRowCount();
 		setMainButtonTitle(btnTargets, targetCount);
 		int distinctCount = hashCounts.size();
 		setMainButtonTitle(btnDistinct, distinctCount);
@@ -192,20 +203,161 @@ public class DeDup {
 	private void doPrintResults() {
 	}
 
-	private void doCopy() {
-	}
+	// private void doCopy() {
+	// }//doCopy
+	//
+	// private void doMove() {
+	// }//doMove
 
-	private void doMove() {
-	}
+	private String getLeastCommonDirectory(List<Object[]> rows) {
+		int directoryColumn = mainTableModel.getColumnIndex(MainTableModel.DIRECTORY);
+
+		SortedSet<PathAndCount> targetCandiates = new TreeSet<PathAndCount>();
+		for (Object[] row : rows) {
+			targetCandiates.add(new PathAndCount(Paths.get((String) row[directoryColumn])));
+		} // for each row
+
+		return targetCandiates.isEmpty() ? System.getProperty("user.home") : targetCandiates.last().toString();
+	}// getLeastCommonDirectory
+
+	private List<Object[]> getSelectedRows(LinkedList<Integer> rowsToRemove) {
+		int actionColumn = mainTableModel.getColumnIndex(MainTableModel.ACTION);
+		List<Object[]> ans = new ArrayList<Object[]>();
+		rowsToRemove.clear();
+		for (int rowIndex = 0; rowIndex < mainTableModel.getRowCount(); rowIndex++) {
+			Object[] row = mainTableModel.getRow(rowIndex);
+			if ((boolean) row[actionColumn]) {
+				ans.add(row);
+				rowsToRemove.addFirst(rowIndex);
+			} // if action checked
+		} // for each row
+		return ans;
+	}// getSelectedRows
+
+	private void doCopyMove(String action) {
+		int directoryColumn = mainTableModel.getColumnIndex(MainTableModel.DIRECTORY);
+		int nameColumn = mainTableModel.getColumnIndex(MainTableModel.NAME);
+
+		JFileChooser fc = new JFileChooser(copyMoveDirectory);
+		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		fc.setMultiSelectionEnabled(false);
+		if (fc.showDialog(frameDeDup, "pick target folder") != JFileChooser.APPROVE_OPTION) {
+			return;
+		} // if quit file chooser
+
+		File targetFolder = fc.getSelectedFile();
+		copyMoveDirectory = targetFolder.toString();
+
+		LinkedList<Integer> rowsToRemove = new LinkedList<Integer>();
+		List<Object[]> rows = getSelectedRows(rowsToRemove);
+
+		String lcd = getLeastCommonDirectory(rows);
+		log.infof("%n%ntargetFolder : %s%nlcd  : %s%n%n", copyMoveDirectory, lcd);
+
+		String fileName;
+		String sourceDirectory;
+		String destinationDirectory;
+
+		String message = null;
+
+		Path sourceFile;
+		Path destinationFile;
+		Path destinationParentPath;
+		for (Object[] row : rows) {
+			sourceDirectory = (String) row[directoryColumn];
+			destinationDirectory = sourceDirectory.replace(lcd, copyMoveDirectory);
+			fileName = (String) row[nameColumn];
+			sourceFile = Paths.get(sourceDirectory, fileName);
+			destinationFile = Paths.get(destinationDirectory, fileName);
+			destinationParentPath = destinationFile.getParent();
+
+			// log.infof("sourceFile: %s%ndestinationFile: %s%n%n", sourceFile, sourceFile);
+			if (action.equals(BTN_MOVE)) {
+				try {
+					if (!Files.exists(destinationParentPath, LinkOption.NOFOLLOW_LINKS)) {
+						Files.createDirectories(destinationParentPath);
+						log.specialf("Created Folder %s%n", destinationParentPath);
+					} // if parent exists
+					Files.move(sourceFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+					message = String.format(" Moved  %s --> %s%n", sourceFile, destinationFile);
+				} catch (UnsupportedOperationException uoe) {
+					message = String.format("Unsupported operation exception - %s%n", sourceFile, uoe.getMessage());
+				} catch (DirectoryNotEmptyException dnee) {
+					message = String.format("Directory Not Empty - %s%n%s", sourceFile, dnee.getMessage());
+				} catch (IOException ioe) {
+					message = String.format(" Failed Copy: %s - %s", sourceFile, ioe.getMessage());
+				} // try
+			} else if (action.equals(BTN_COPY)) {
+				try {
+					if (!Files.exists(destinationParentPath, LinkOption.NOFOLLOW_LINKS)) {
+						Files.createDirectories(destinationParentPath);
+						log.specialf("Created Folder %s%n", destinationParentPath);
+					} // if parent exists
+					Files.copy(sourceFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
+					message = String.format(" Copied  %s --> %s%n", sourceFile, destinationFile);
+				} catch (UnsupportedOperationException uoe) {
+					message = String.format("Unsupported operation exception - %s%n", sourceFile, uoe.getMessage());
+				} catch (DirectoryNotEmptyException dnee) {
+					message = String.format("Directory Not Empty - %s%n%s", sourceFile, dnee.getMessage());
+				} catch (IOException ioe) {
+					message = String.format(" Failed Copy: %s - %s", sourceFile, ioe.getMessage());
+				} // try
+			} // if/else
+			log.infof(message);
+		} // for each row
+		if (action.equals(BTN_MOVE)) {
+			removeRows(rowsToRemove, mainTable, mainTableModel);
+		} // if
+	}// copyMove
 
 	private void doDelete() {
-	}
+		int directoryColumn = mainTableModel.getColumnIndex(MainTableModel.DIRECTORY);
+		int nameColumn = mainTableModel.getColumnIndex(MainTableModel.NAME);
+		Path subjectPath;
+		String message;
+		LinkedList<Integer> rowsToRemove = new LinkedList<Integer>();
+		List<Object[]> rows = getSelectedRows(rowsToRemove);
+
+		for (Object[] row : rows) {
+			subjectPath = Paths.get((String) row[directoryColumn], (String) row[nameColumn]);
+			try {
+				Files.delete(subjectPath);
+				message = String.format("[doActionDelete] File Deleted: %s", subjectPath);
+			} catch (AccessDeniedException ade) {
+				message = String.format("[doActionDelete] Access Denied: %s", subjectPath);
+			} catch (NoSuchFileException ne) {
+				message = String.format("[doActionDelete] File Does Not Exist : %s", subjectPath);
+			} catch (IOException ioe) {
+				message = String.format("[doActionDelete] Failed Delete: %s - %s", subjectPath, ioe);
+			} // try
+			log.info(message);
+		} // for each row
+		removeRows(rowsToRemove, mainTable, mainTableModel);
+	}// doDelete
+
+	private void removeRows(LinkedList<Integer> rows, JTable table, MyTableModel tableModel) {
+		int row;
+		String message;
+		message = String.format("[Before] Table: %d, Model %d", mainTable.getRowCount(), tableModel.getRowCount());
+		log.special(message);
+		while (!rows.isEmpty()) {
+			row = rows.poll();
+			tableModel.removeRow(row);
+		} // while
+
+		table.setModel(tableModel);
+		setTableColumns();
+		table.updateUI();
+
+		message = String.format("[After] Table: %d, Model %d", table.getRowCount(), tableModel.getRowCount());
+		log.special(message);
+	}// removeRows
 
 	@SuppressWarnings("unchecked")
 	private void filterTargetTable(RowFilter<?, ?> filter) {
 		if (mainTable.getRowCount() > 0) {
-			TableRowSorter<TargetTableModel> tableRowSorter = new TableRowSorter<TargetTableModel>(targetTableModel);
-			tableRowSorter.setRowFilter((RowFilter<? super TargetTableModel, ? super Integer>) filter);
+			TableRowSorter<MainTableModel> tableRowSorter = new TableRowSorter<MainTableModel>(mainTableModel);
+			tableRowSorter.setRowFilter((RowFilter<? super MainTableModel, ? super Integer>) filter);
 			mainTable.setRowSorter(tableRowSorter);
 		} // if rows
 	}// filterTable
@@ -260,7 +412,7 @@ public class DeDup {
 				tc.setPreferredWidth(40);
 			}// switch
 		} // for each column
-		mainTable.setRowSorter(new TableRowSorter<TargetTableModel>(targetTableModel));
+		mainTable.setRowSorter(new TableRowSorter<MainTableModel>(mainTableModel));
 	}// setTableColumns
 
 	private void setupActionButtons() {
@@ -372,16 +524,14 @@ public class DeDup {
 
 		try {
 			ArrayList<String> targetSuffixes = (ArrayList<String>) Files.readAllLines(Paths.get(typeFile));
-			StringBuilder sb = new StringBuilder("(?)"); // case insensitive
-			for (String targetSuffix : targetSuffixes) {
-				targetSuffix.trim();
-				sb.append(targetSuffix);
-				sb.append("|");
-			} // for each file type
-			sb.deleteCharAt(sb.length() - 1); // remove trailing "|"
 
-			String targetTypesRegex = sb.toString();
+			StringJoiner sj = new StringJoiner("|","(?)",EMPTY_STRING);
+			for (String targetSuffix : targetSuffixes) {
+				sj.add(targetSuffix.trim());
+			}//for
+			String targetTypesRegex = sj.toString();
 			patternTargets = Pattern.compile(targetTypesRegex);
+			
 		} catch (Exception e) {
 			lblActiveTypeFile.setText("Failed to load target types");
 			log.infof("Failed to read type file : %s%n", typeFile);
@@ -389,6 +539,7 @@ public class DeDup {
 		} // try
 
 	}// loadTargetRegex
+
 
 	private void doEditTypeFiles() {
 		activeList = (String) modelTypeFiles.getSelectedItem();
@@ -491,6 +642,7 @@ public class DeDup {
 		myPrefs.putInt("splitPaneTargets.divederLoc", splitPaneTargets.getDividerLocation());
 		myPrefs.putInt("tabbedPaneSelectedIndex", tabbedPane.getSelectedIndex());
 
+		myPrefs.put("targetDirectory", copyMoveDirectory);
 		myPrefs.put("TypeFile", (String) modelTypeFiles.getSelectedItem());
 
 		myPrefs = null;
@@ -517,7 +669,7 @@ public class DeDup {
 		tabbedPane.setSelectedIndex(myPrefs.getInt("tabbedPaneSelectedIndex", 2));
 
 		modelTypeFiles.setSelectedItem(myPrefs.get("TypeFile", "Pictures"));
-
+		copyMoveDirectory = myPrefs.get("targetDirectory", EMPTY_STRING);
 		myPrefs = null;
 
 		targetListModel = getListModel(LIST_TARGETS);
@@ -622,8 +774,7 @@ public class DeDup {
 
 					DistinctFilter filter = new DistinctFilter();
 
-					TableRowSorter<TargetTableModel> tableRowSorter = new TableRowSorter<TargetTableModel>(
-							targetTableModel);
+					TableRowSorter<MainTableModel> tableRowSorter = new TableRowSorter<MainTableModel>(mainTableModel);
 					tableRowSorter.setRowFilter(filter);
 					mainTable.setRowSorter(tableRowSorter);
 				} // if rows
@@ -732,21 +883,10 @@ public class DeDup {
 		panelMajorWorkLeft.add(panelMWR2, gbc_panelMWR2);
 		GridBagLayout gbl_panelMWR2 = new GridBagLayout();
 		gbl_panelMWR2.columnWidths = new int[] { 0, 0 };
-		gbl_panelMWR2.rowHeights = new int[] { 20, 0, 20, 0, 10, 0, 10, 0, 10, 0, 5, 0 };
+		gbl_panelMWR2.rowHeights = new int[] { 20, 0, 0, 10, 0, 10, 0, 10, 0, 5, 0 };
 		gbl_panelMWR2.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panelMWR2.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-				Double.MIN_VALUE };
+		gbl_panelMWR2.rowWeights = new double[] { 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panelMWR2.setLayout(gbl_panelMWR2);
-
-		lblTotalFiles = new JLabel("0000 Total Files");
-		lblTotalFiles.setForeground(Color.BLUE);
-		lblTotalFiles.setHorizontalAlignment(SwingConstants.CENTER);
-		GridBagConstraints gbc_lblTotalFiles = new GridBagConstraints();
-		gbc_lblTotalFiles.fill = GridBagConstraints.VERTICAL;
-		gbc_lblTotalFiles.insets = new Insets(0, 0, 5, 0);
-		gbc_lblTotalFiles.gridx = 0;
-		gbc_lblTotalFiles.gridy = 1;
-		panelMWR2.add(lblTotalFiles, gbc_lblTotalFiles);
 
 		btnTargets = new JToggleButton("Targets");
 		btnTargets.addActionListener(adapterDeDup);
@@ -756,7 +896,7 @@ public class DeDup {
 		gbc_btnTargets.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnTargets.insets = new Insets(0, 0, 5, 0);
 		gbc_btnTargets.gridx = 0;
-		gbc_btnTargets.gridy = 3;
+		gbc_btnTargets.gridy = 2;
 		panelMWR2.add(btnTargets, gbc_btnTargets);
 
 		btnDistinct = new JToggleButton("Distinct");
@@ -768,7 +908,7 @@ public class DeDup {
 		gbc_btnDistinct.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnDistinct.insets = new Insets(0, 0, 5, 0);
 		gbc_btnDistinct.gridx = 0;
-		gbc_btnDistinct.gridy = 5;
+		gbc_btnDistinct.gridy = 4;
 		panelMWR2.add(btnDistinct, gbc_btnDistinct);
 
 		btnUnique = new JToggleButton("Unique");
@@ -779,7 +919,7 @@ public class DeDup {
 		gbc_btnUnique.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnUnique.insets = new Insets(0, 0, 5, 0);
 		gbc_btnUnique.gridx = 0;
-		gbc_btnUnique.gridy = 7;
+		gbc_btnUnique.gridy = 6;
 		panelMWR2.add(btnUnique, gbc_btnUnique);
 
 		btnDuplicates = new JToggleButton("Duplicates");
@@ -790,7 +930,7 @@ public class DeDup {
 		gbc_btnDuplicates.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnDuplicates.insets = new Insets(0, 0, 5, 0);
 		gbc_btnDuplicates.gridx = 0;
-		gbc_btnDuplicates.gridy = 9;
+		gbc_btnDuplicates.gridy = 8;
 		panelMWR2.add(btnDuplicates, gbc_btnDuplicates);
 
 		Component verticalStrut_21 = Box.createVerticalStrut(20);
@@ -1136,6 +1276,22 @@ public class DeDup {
 
 		JMenuBar menuBar = new JMenuBar();
 		frameDeDup.setJMenuBar(menuBar);
+		///////////////////////////////////////////////////
+		JPopupMenu popupUtility = new JPopupMenu();
+		addPopup(mainTable, popupUtility);
+
+		JMenuItem popupUtilitySelect = new JMenuItem("Select");
+		popupUtilitySelect.setName(PUM_UTILITY_SELECT);
+		popupUtilitySelect.setActionCommand(PUM_UTILITY_SELECT);
+		popupUtilitySelect.addActionListener(adapterDeDup);
+		popupUtility.add(popupUtilitySelect);
+
+		JMenuItem popupUtilityDeselect = new JMenuItem("Deselect");
+		popupUtilityDeselect.setName(PUM_UTILITY_DESELECT);
+		popupUtilityDeselect.setActionCommand(PUM_UTILITY_DESELECT);
+		popupUtilityDeselect.addActionListener(adapterDeDup);
+		popupUtility.add(popupUtilityDeselect);
+		/////////////////////////////////////////////////////////////////
 	}// initialize
 
 	// ---------------------------------------------------------
@@ -1207,11 +1363,9 @@ public class DeDup {
 				doPrintResults();
 				break;
 
-			case BTN_COPY:
-				doCopy();
-				break;
 			case BTN_MOVE:
-				doMove();
+			case BTN_COPY:
+				doCopyMove(actionEvent.getActionCommand());
 				break;
 			case BTN_DELETE:
 				doDelete();
@@ -1259,6 +1413,14 @@ public class DeDup {
 			case BTN_EDIT_TYPEFILES:
 				doEditTypeFiles();
 				break;
+
+			case PUM_UTILITY_SELECT:
+				doUtilityBulkSelection(mainTable, true);
+				break;
+			case PUM_UTILITY_DESELECT:
+				doUtilityBulkSelection(mainTable, false);
+				break;
+
 			default:
 				log.warnf("[actionPerformed] switch at default: Action Command = %s%n", actionEvent.getActionCommand());
 			}// switch action Command
@@ -1317,7 +1479,6 @@ public class DeDup {
 	private JComboBox<String> cbTypeFiles;
 	private JLabel lblActiveTypeFile;
 	private JTabbedPane tabbedPane;
-	private JLabel lblTotalFiles;
 	private JToggleButton btnTargets;
 	private JToggleButton btnDistinct;
 	private JToggleButton btnUnique;
@@ -1386,7 +1547,7 @@ public class DeDup {
 
 		public DistinctFilter() {
 			this.hashIDs = new HashSet<String>();
-			this.hashIndex = targetTableModel.getColumnIndex(TargetTableModel.HASH_KEY);
+			this.hashIndex = mainTableModel.getColumnIndex(MainTableModel.HASH_KEY);
 
 		}// constructor
 
@@ -1406,7 +1567,7 @@ public class DeDup {
 		int dupIndex;
 
 		UniqueFilter() {
-			dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+			dupIndex = mainTableModel.getColumnIndex(MainTableModel.DUP);
 		}// constructor
 
 		@Override
@@ -1420,7 +1581,7 @@ public class DeDup {
 		int dupIndex;
 
 		DuplicateFilter() {
-			dupIndex = targetTableModel.getColumnIndex(TargetTableModel.DUP);
+			dupIndex = mainTableModel.getColumnIndex(MainTableModel.DUP);
 		}// constructor
 
 		@Override
@@ -1446,7 +1607,7 @@ public class DeDup {
 		@Override
 		protected void compute() {
 			if (netSkipModel.contains(folder.toPath())) {
-				log.infof("[Meld.compute] skipping: %s%n", folder);
+				// log.infof("[Meld.compute] skipping: %s%n", folder);
 				return;
 			} // if we need to skip
 
@@ -1467,7 +1628,7 @@ public class DeDup {
 
 			/* Find the catalog in this directory */
 			File catalogFile = new File(folder, LIST_PREFIX + activeList);
-			log.infof("[Meld.compute] catalogFile: %s%n", catalogFile);
+			// log.infof("[Meld.compute] catalogFile: %s%n", catalogFile);
 			HashMap<String, FileProfile> catalog = new HashMap<String, FileProfile>();
 			try {
 				FileInputStream fis = new FileInputStream(catalogFile);
@@ -1498,7 +1659,7 @@ public class DeDup {
 
 				} // synchronized (idLock)
 				hashCounts.put(hashKey, hashCounts.get(hashKey) + 1);
-				targetTableModel.addRow(profile, hashIDs.get(hashKey));
+				mainTableModel.addRow(profile, hashIDs.get(hashKey));
 			} // for each
 
 		}// compute
@@ -1638,7 +1799,43 @@ public class DeDup {
 		}// isTarget
 
 	}// class UpdateCatalog
-		// ============================================
-		// ============================================
+
+	// =========================================================//
+	/* Popup Menu for bulk select/deselect in main table */
+	// =========================================================//
+	private static final String PUM_UTILITY_SELECT = "popupUtilitySelect";
+	private static final String PUM_UTILITY_DESELECT = "popupUtilityDeselect";
+
+	private void doUtilityBulkSelection(JTable table, boolean state) {
+		int[] selectedRows = table.getSelectedRows();
+		int column = mainTableModel.findColumn("Action");
+		for (int row = 0; row < selectedRows.length; row++) {
+			table.setValueAt(state, selectedRows[row], column);
+		} // for each selected row
+		table.updateUI();
+	}// doUtilityBulkSelection
+
+	private static void addPopup(Component component, final JPopupMenu popup) {
+		component.addMouseListener(new MouseAdapter() {
+			public void mousePressed(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				} // if popup Trigger
+			}
+
+			public void mouseReleased(MouseEvent e) {
+				if (e.isPopupTrigger()) {
+					showMenu(e);
+				}
+			}
+
+			private void showMenu(MouseEvent e) {
+				popup.show(e.getComponent(), e.getX(), e.getY());
+			}
+		});
+	}// addPopup
+		// =========================================================//
+	/* Popup Menu for bulk select/deselect in main table */
+	// =========================================================//
 
 }// class DeDup
