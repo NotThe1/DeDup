@@ -45,6 +45,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.StringJoiner;
+import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
@@ -68,6 +69,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
@@ -96,7 +98,8 @@ public class DeDup {
 
 	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
-
+	private SortedSet<String> targets = new TreeSet<String>();
+//	private String leastCommonDirectory;
 	private MainTableModel mainTableModel = new MainTableModel();
 
 	public static final AtomicInteger fileID = new AtomicInteger(0);
@@ -179,6 +182,7 @@ public class DeDup {
 		String hashKey;
 		int uniqueCount = 0;
 		int hashCount = 0;
+		// hashCounts.clear();
 		for (int row = 0; row < mainTableModel.getRowCount(); row++) {
 			hashKey = (String) mainTableModel.getValueAt(row, hashIndex);
 
@@ -209,26 +213,51 @@ public class DeDup {
 	// private void doMove() {
 	// }//doMove
 
-	private String getLeastCommonDirectory(List<Object[]> rows) {
-		int directoryColumn = mainTableModel.getColumnIndex(MainTableModel.DIRECTORY);
+	/* TODO need to clean this up later */
+	private String getLeastCommonDirectory(SortedSet<String> targets) {
+		final String fileSeparator = File.separator;
+		String firstTarget = targets.first();
+		StringTokenizer st = new StringTokenizer(firstTarget, fileSeparator);
 
-		SortedSet<PathAndCount> targetCandiates = new TreeSet<PathAndCount>();
-		for (Object[] row : rows) {
-			targetCandiates.add(new PathAndCount(Paths.get((String) row[directoryColumn])));
-		} // for each row
+		boolean done = false;
 
-		return targetCandiates.isEmpty() ? System.getProperty("user.home") : targetCandiates.last().toString();
+		String lcd0 = st.nextToken() + fileSeparator;
+		String lcd = lcd0;
+
+		do {
+			for (String target : targets) {
+				if (!target.startsWith(lcd0)) {
+					done = true;
+					break;
+				} // if
+			} // for
+			if (!done) {
+				lcd = lcd0;
+				lcd0 = lcd + st.nextToken() + fileSeparator;
+			} // if
+		} while (!done && st.hasMoreTokens());
+
+		if (lcd0.equals(lcd)) {
+			JOptionPane.showMessageDialog(frameDeDup, "Cannot source Copy or Move from Folders with different roots",
+					"Source files on different disks", JOptionPane.ERROR_MESSAGE);
+			lcd = EMPTY_STRING;
+		} // if not same disk
+
+		return lcd;
 	}// getLeastCommonDirectory
 
 	private List<Object[]> getSelectedRows(LinkedList<Integer> rowsToRemove) {
+		int directoryColumn = mainTableModel.getColumnIndex(MainTableModel.DIRECTORY);
 		int actionColumn = mainTableModel.getColumnIndex(MainTableModel.ACTION);
 		List<Object[]> ans = new ArrayList<Object[]>();
 		rowsToRemove.clear();
+		targets.clear();
 		for (int rowIndex = 0; rowIndex < mainTableModel.getRowCount(); rowIndex++) {
 			Object[] row = mainTableModel.getRow(rowIndex);
 			if ((boolean) row[actionColumn]) {
 				ans.add(row);
 				rowsToRemove.addFirst(rowIndex);
+				targets.add((String) row[directoryColumn]);
 			} // if action checked
 		} // for each row
 		return ans;
@@ -246,14 +275,17 @@ public class DeDup {
 		} // if quit file chooser
 
 		File targetFolder = fc.getSelectedFile();
-		copyMoveDirectory = targetFolder.toString();
+		copyMoveDirectory = targetFolder.toString() + File.separator;
 
 		LinkedList<Integer> rowsToRemove = new LinkedList<Integer>();
 		List<Object[]> rows = getSelectedRows(rowsToRemove);
 
-		String lcd = getLeastCommonDirectory(rows);
+		String lcd = getLeastCommonDirectory(targets);
+		if (lcd.equals(EMPTY_STRING)) {
+			return;
+		} // if bad LeastCommonDirectory
 		log.infof("%n%ntargetFolder : %s%nlcd  : %s%n%n", copyMoveDirectory, lcd);
-
+//int a = 0;
 		String fileName;
 		String sourceDirectory;
 		String destinationDirectory;
@@ -263,6 +295,7 @@ public class DeDup {
 		Path sourceFile;
 		Path destinationFile;
 		Path destinationParentPath;
+		Object lock1 = new Object();
 		for (Object[] row : rows) {
 			sourceDirectory = (String) row[directoryColumn];
 			destinationDirectory = sourceDirectory.replace(lcd, copyMoveDirectory);
@@ -274,10 +307,12 @@ public class DeDup {
 			// log.infof("sourceFile: %s%ndestinationFile: %s%n%n", sourceFile, sourceFile);
 			if (action.equals(BTN_MOVE)) {
 				try {
-					if (!Files.exists(destinationParentPath, LinkOption.NOFOLLOW_LINKS)) {
-						Files.createDirectories(destinationParentPath);
-						log.specialf("Created Folder %s%n", destinationParentPath);
-					} // if parent exists
+					synchronized (lock1) {
+						if (!Files.exists(destinationParentPath, LinkOption.NOFOLLOW_LINKS)) {
+							Files.createDirectories(destinationParentPath);
+							// log.specialf("Created Folder %s%n", destinationParentPath);
+						} // if parent exists
+					} // lock1
 					Files.move(sourceFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
 					message = String.format(" Moved  %s --> %s%n", sourceFile, destinationFile);
 				} catch (UnsupportedOperationException uoe) {
@@ -333,6 +368,8 @@ public class DeDup {
 			log.info(message);
 		} // for each row
 		removeRows(rowsToRemove, mainTable, mainTableModel);
+		setMainButtonTitle(btnTargets, mainTable.getRowCount());
+
 	}// doDelete
 
 	private void removeRows(LinkedList<Integer> rows, JTable table, MyTableModel tableModel) {
@@ -368,14 +405,17 @@ public class DeDup {
 
 	private void doDistinct() {
 		filterTargetTable(new DistinctFilter());
+		setMainButtonTitle(btnDistinct, mainTable.getRowCount());
 	}// doDistinct
 
 	private void doUnique() {
 		filterTargetTable(new UniqueFilter());
+		setMainButtonTitle(btnUnique, mainTable.getRowCount());
 	}// doUnique
 
 	private void doDuplicates() {
 		filterTargetTable(new DuplicateFilter());
+		setMainButtonTitle(btnDuplicates, mainTable.getRowCount());
 	}// doDuplicates
 
 	//////////////////////////////////////////////
@@ -525,13 +565,13 @@ public class DeDup {
 		try {
 			ArrayList<String> targetSuffixes = (ArrayList<String>) Files.readAllLines(Paths.get(typeFile));
 
-			StringJoiner sj = new StringJoiner("|","(?)",EMPTY_STRING);
+			StringJoiner sj = new StringJoiner("|", "(?)", EMPTY_STRING);
 			for (String targetSuffix : targetSuffixes) {
 				sj.add(targetSuffix.trim());
-			}//for
+			} // for
 			String targetTypesRegex = sj.toString();
 			patternTargets = Pattern.compile(targetTypesRegex);
-			
+
 		} catch (Exception e) {
 			lblActiveTypeFile.setText("Failed to load target types");
 			log.infof("Failed to read type file : %s%n", typeFile);
@@ -539,7 +579,6 @@ public class DeDup {
 		} // try
 
 	}// loadTargetRegex
-
 
 	private void doEditTypeFiles() {
 		activeList = (String) modelTypeFiles.getSelectedItem();
@@ -889,6 +928,7 @@ public class DeDup {
 		panelMWR2.setLayout(gbl_panelMWR2);
 
 		btnTargets = new JToggleButton("Targets");
+		btnTargets.setToolTipText("Total number of files active");
 		btnTargets.addActionListener(adapterDeDup);
 		btnTargets.setName("Targets");
 		btnTargets.setActionCommand(BTN_TARGETS);
@@ -900,6 +940,7 @@ public class DeDup {
 		panelMWR2.add(btnTargets, gbc_btnTargets);
 
 		btnDistinct = new JToggleButton("Distinct");
+		btnDistinct.setToolTipText("Net count of different files");
 		btnDistinct.addActionListener(adapterDeDup);
 		btnDistinct.setName("Distinct");
 		btnDistinct.setActionCommand(BTN_DISTINCT);
@@ -912,6 +953,7 @@ public class DeDup {
 		panelMWR2.add(btnDistinct, gbc_btnDistinct);
 
 		btnUnique = new JToggleButton("Unique");
+		btnUnique.setToolTipText("Files with no duplicates");
 		btnUnique.addActionListener(adapterDeDup);
 		btnUnique.setName("Unique");
 		btnUnique.setActionCommand(BTN_UNIQUE);
@@ -923,6 +965,7 @@ public class DeDup {
 		panelMWR2.add(btnUnique, gbc_btnUnique);
 
 		btnDuplicates = new JToggleButton("Duplicates");
+		btnDuplicates.setToolTipText("Total number of files that have duplicates");
 		btnDuplicates.addActionListener(adapterDeDup);
 		btnDuplicates.setName("Duplicates");
 		btnDuplicates.setActionCommand(BTN_DUPLICATES);
