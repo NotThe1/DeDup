@@ -16,6 +16,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.print.PrinterException;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
@@ -34,11 +35,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.text.Format;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -99,17 +102,19 @@ public class DeDup {
 	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
 	private SortedSet<String> targets = new TreeSet<String>();
-//	private String leastCommonDirectory;
+	// private String leastCommonDirectory;
 	private MainTableModel mainTableModel = new MainTableModel();
 
 	public static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
 
-	List<Path> netSkipModel;
-	List<Path> netTargetModel;
-	String activeList;
-	String copyMoveDirectory = EMPTY_STRING;
+	private List<Path> netSkipModel;
+	private List<Path> netTargetModel;
+	private String activeList;
+	private String copyMoveDirectory = EMPTY_STRING;
+	private String addPath = ".";
+	private String skipPath = ".";
 
 	private static final int PROCESSORS = Runtime.getRuntime().availableProcessors();
 
@@ -205,7 +210,17 @@ public class DeDup {
 	}// analyzeMainTable
 
 	private void doPrintResults() {
-	}
+		String reportType = mainGroup.getSelection().getActionCommand();
+		MessageFormat headerFormat = new MessageFormat(reportType);
+		String ff = MessageFormat.format("{0,time} - {0,date}    Page  ", new Date());
+		MessageFormat footerFormat = new MessageFormat(ff + "{0}");
+		try {
+			mainTable.print(JTable.PrintMode.FIT_WIDTH, headerFormat, footerFormat);
+		} catch (PrinterException e) {
+			log.error("[failed Print]" + e.getMessage());
+			e.printStackTrace();
+		} // try
+	}// doPrintResults
 
 	// private void doCopy() {
 	// }//doCopy
@@ -285,7 +300,7 @@ public class DeDup {
 			return;
 		} // if bad LeastCommonDirectory
 		log.infof("%n%ntargetFolder : %s%nlcd  : %s%n%n", copyMoveDirectory, lcd);
-//int a = 0;
+		// int a = 0;
 		String fileName;
 		String sourceDirectory;
 		String destinationDirectory;
@@ -473,14 +488,21 @@ public class DeDup {
 	}// setActionButtons
 
 	/*                                                   */
-	private void doAddFolder(DefaultListModel<File> listModel) {
-		JFileChooser fc = new JFileChooser();
+	private void doAddFolder(DefaultListModel<File> listModel, String actionCommand) {
+		String startDir = actionCommand.equals(BTN_TARGET_ADD) ? addPath : skipPath;
+		JFileChooser fc = new JFileChooser(startDir);
 		fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		fc.setMultiSelectionEnabled(true);
 		if (fc.showDialog(frameDeDup, "pick folder(s)") == JFileChooser.APPROVE_OPTION) {
 			File[] files = fc.getSelectedFiles();
 			for (File file : files) {
 				listModel.addElement(file);
+				if (actionCommand.equals(BTN_TARGET_ADD)) {
+					addPath = file.getAbsolutePath();
+				} else {
+					skipPath = file.getAbsolutePath();
+				} // if
+
 			} // files
 		} // if
 	}// doAddFolder
@@ -683,6 +705,8 @@ public class DeDup {
 
 		myPrefs.put("targetDirectory", copyMoveDirectory);
 		myPrefs.put("TypeFile", (String) modelTypeFiles.getSelectedItem());
+		myPrefs.put("addPath", addPath);
+		myPrefs.put("skipPath", skipPath);
 
 		myPrefs = null;
 
@@ -708,6 +732,8 @@ public class DeDup {
 		tabbedPane.setSelectedIndex(myPrefs.getInt("tabbedPaneSelectedIndex", 2));
 
 		modelTypeFiles.setSelectedItem(myPrefs.get("TypeFile", "Pictures"));
+		addPath = myPrefs.get("addPath", EMPTY_STRING);
+		skipPath = myPrefs.get("skipPath", EMPTY_STRING);
 		copyMoveDirectory = myPrefs.get("targetDirectory", EMPTY_STRING);
 		myPrefs = null;
 
@@ -1428,7 +1454,7 @@ public class DeDup {
 				break;
 
 			case BTN_TARGET_ADD:
-				doAddFolder(targetListModel);
+				doAddFolder(targetListModel, actionEvent.getActionCommand());
 				break;
 			case BTN_TARGET_REMOVE:
 				log.infof("Action Command = %s%n", actionEvent.getActionCommand());
@@ -1441,7 +1467,7 @@ public class DeDup {
 				doClearFolders(targetListModel, btnTargetRemove);
 				break;
 			case BTN_SKIP_ADD:
-				doAddFolder(skipListModel);
+				doAddFolder(skipListModel, actionEvent.getActionCommand());
 				break;
 			case BTN_SKIP_REMOVE:
 				log.infof("Action Command = %s%n", actionEvent.getActionCommand());
