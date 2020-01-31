@@ -65,6 +65,7 @@ import javax.swing.Box;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
@@ -825,19 +826,17 @@ public class DeDup {
 		gbc_verticalStrut.gridx = 0;
 		gbc_verticalStrut.gridy = 0;
 		panelTop.add(verticalStrut, gbc_verticalStrut);
-
-		JButton btnTest = new JButton("test");
-		btnTest.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				doStart();
-			}// actionPerformed
-		});
-		GridBagConstraints gbc_btnTest = new GridBagConstraints();
-		gbc_btnTest.insets = new Insets(0, 0, 0, 5);
-		gbc_btnTest.anchor = GridBagConstraints.NORTH;
-		gbc_btnTest.gridx = 1;
-		gbc_btnTest.gridy = 0;
-		panelTop.add(btnTest, gbc_btnTest);
+		// icon 22x22 png
+		JButton btnStartTB = new JButton(new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png"))));
+		btnStartTB.addActionListener(adapterDeDup);
+		btnStartTB.setActionCommand(BTN_START);
+		btnStartTB.setToolTipText("Start Analysis");
+		GridBagConstraints gbc_btnStartTB = new GridBagConstraints();
+		gbc_btnStartTB.insets = new Insets(0, 0, 0, 5);
+		gbc_btnStartTB.anchor = GridBagConstraints.NORTH;
+		gbc_btnStartTB.gridx = 1;
+		gbc_btnStartTB.gridy = 0;
+		panelTop.add(btnStartTB, gbc_btnStartTB);
 
 		JButton btnTest1 = new JButton("Test 1");
 		btnTest1.addActionListener(new ActionListener() {
@@ -919,6 +918,7 @@ public class DeDup {
 		panelMWR0.setLayout(gbl_panelMWR0);
 
 		JButton btnStart = new JButton("Start");
+		btnStart.setToolTipText("Start Analysis");
 		btnStart.addActionListener(adapterDeDup);
 		btnStart.setActionCommand(BTN_START);
 		GridBagConstraints gbc_btnStart = new GridBagConstraints();
