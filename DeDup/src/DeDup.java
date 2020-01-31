@@ -20,6 +20,7 @@ import java.awt.print.PrinterException;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -300,7 +301,7 @@ public class DeDup {
 			return;
 		} // if bad LeastCommonDirectory
 		log.infof("%n%ntargetFolder : %s%nlcd  : %s%n%n", copyMoveDirectory, lcd);
-		// int a = 0;
+		
 		String fileName;
 		String sourceDirectory;
 		String destinationDirectory;
@@ -331,7 +332,7 @@ public class DeDup {
 					Files.move(sourceFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
 					message = String.format(" Moved  %s --> %s%n", sourceFile, destinationFile);
 				} catch (UnsupportedOperationException uoe) {
-					message = String.format("Unsupported operation exception - %s%n", sourceFile, uoe.getMessage());
+					message = String.format("Unsupported operation exception - %s%n%s%n", sourceFile, uoe.getMessage());
 				} catch (DirectoryNotEmptyException dnee) {
 					message = String.format("Directory Not Empty - %s%n%s", sourceFile, dnee.getMessage());
 				} catch (IOException ioe) {
@@ -346,7 +347,7 @@ public class DeDup {
 					Files.copy(sourceFile, destinationFile, StandardCopyOption.REPLACE_EXISTING);
 					message = String.format(" Copied  %s --> %s%n", sourceFile, destinationFile);
 				} catch (UnsupportedOperationException uoe) {
-					message = String.format("Unsupported operation exception - %s%n", sourceFile, uoe.getMessage());
+					message = String.format("Unsupported operation exception - %s%n%s%n", sourceFile, uoe.getMessage());
 				} catch (DirectoryNotEmptyException dnee) {
 					message = String.format("Directory Not Empty - %s%n%s", sourceFile, dnee.getMessage());
 				} catch (IOException ioe) {
@@ -639,7 +640,7 @@ public class DeDup {
 
 		File[] files = appDirectory.listFiles(new ListFilter(TYPEFILE));
 
-		if (files == null | files.length == 0) {
+		if (files == null || files.length == 0) {
 			for (String file : INITIAL_LISTFILES) {
 				try {
 					InputStream inStream = this.getClass().getResourceAsStream(file);
@@ -668,8 +669,12 @@ public class DeDup {
 			ans = (DefaultListModel<File>) ois.readObject();
 			ois.close();
 			fis.close();
-		} catch (Exception e) {
-			log.error("Could not get Target/Skip list");
+		} catch (ClassNotFoundException cnfe) {
+			log.infof("Could not get DefaultListModel class for : " + file.getParentFile().toString());
+		} catch (FileNotFoundException fnfe) {
+			log.infof("Could not get List for : " + file.getParentFile().toString());
+		} catch (IOException ioe) {
+			log.errorf("IOException reading %s%n%s%n", file.getParentFile().toString(), ioe.getMessage());
 		} // try
 		return ans;
 	}// saveListModel
@@ -683,8 +688,10 @@ public class DeDup {
 			oos.writeObject(listModel);
 			fos.close();
 			oos.close();
-		} catch (Exception e) {
-			log.error("Could not save Target/Skip list");
+		} catch (FileNotFoundException fnfe) {
+			log.infof("Could not get List for : " + file.getParentFile().toString());
+		} catch (IOException ioe) {
+			log.errorf("IOException reading %s%n%s%n", file.getParentFile().toString(), ioe.getMessage());
 		} // try
 	}// saveListModel
 
@@ -1384,7 +1391,7 @@ public class DeDup {
 
 	// ---------------------------------------------------------
 
-	class PathAndCount implements Comparable<PathAndCount> {
+	static class PathAndCount implements Comparable<PathAndCount> {
 
 		public Path path;
 		public boolean isChild = false;
@@ -1414,6 +1421,18 @@ public class DeDup {
 		public int compareTo(PathAndCount PandC) {
 			return PandC.getCount() - this.getCount();
 		}// compareTo Collections.sort(list)
+
+//		public boolean equals(PathAndCount pac) {
+//			
+//			return compareTo(pac)== 0;
+//		}
+
+		@Override
+		public int hashCode() {
+			// TODO Auto-generated method stub
+			return super.hashCode();
+		}
+		
 
 	}// class PathAndCount
 
@@ -1705,9 +1724,12 @@ public class DeDup {
 				catalog = (HashMap<String, FileProfile>) ois.readObject();
 				ois.close();
 				fis.close();
-			} catch (Exception e) {
-				// log.infof("Could not get catalog for : " +
-				// catalogFile.getParentFile().toString());
+			} catch (ClassNotFoundException cnfe) {
+				log.infof("Could not get Catalog class for : " + catalogFile.getParentFile().toString());
+			} catch (FileNotFoundException fnfe) {
+				log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+			} catch (IOException ioe) {
+				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
 
 			if (catalog.isEmpty()) {
@@ -1719,12 +1741,20 @@ public class DeDup {
 			Collection<FileProfile> profiles = catalog.values();
 
 			for (FileProfile profile : profiles) {
-				hashKey = profile.getHashKey();
+				Integer value;
 				synchronized (idLock) {
-					if (!hashCounts.containsKey(hashKey)) {
-						hashCounts.put(hashKey, 0);
-						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());
-					} // if new hashKey
+					hashKey = profile.getHashKey();
+					
+					
+					if(hashCounts.putIfAbsent(hashKey, 0)==null) {
+						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());	
+					}//if
+					
+					
+//					if (!hashCounts.containsKey(hashKey)) {
+//						hashCounts.put(hashKey, 0);
+//						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());
+//					} // if new hashKey
 
 				} // synchronized (idLock)
 				hashCounts.put(hashKey, hashCounts.get(hashKey) + 1);
@@ -1816,9 +1846,12 @@ public class DeDup {
 				ans = (HashMap<String, FileProfile>) ois.readObject();
 				ois.close();
 				fis.close();
-			} catch (Exception e) {
-				// log.infof("Could not get catalog for : " +
-				// catalogFile.getParentFile().toString());
+			} catch (ClassNotFoundException cnfe) {
+				log.infof("Could not get Catalog class for : " + catalogFile.getParentFile().toString());
+			} catch (FileNotFoundException fnfe) {
+				log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+			} catch (IOException ioe) {
+				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
 			return ans;
 		}// getCatalog
@@ -1830,8 +1863,10 @@ public class DeDup {
 				oos.writeObject(catalog);
 				fos.close();
 				oos.close();
-			} catch (Exception e) {
-				log.infof("Could not write catalog for : " + catalogFile.getParentFile().toString());
+			} catch (FileNotFoundException fnfe) {
+				log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+			} catch (IOException ioe) {
+				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
 			return;
 		}// getCatalog
