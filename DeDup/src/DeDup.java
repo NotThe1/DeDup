@@ -104,6 +104,7 @@ public class DeDup {
 	private DefaultListModel<File> targetListModel = new DefaultListModel<File>();
 	private DefaultListModel<File> skipListModel = new DefaultListModel<File>();
 	private SortedSet<String> targets = new TreeSet<String>();
+	String targetTypesRegex = EMPTY_STRING;
 	// private String leastCommonDirectory;
 	private MainTableModel mainTableModel = new MainTableModel();
 
@@ -144,13 +145,19 @@ public class DeDup {
 	/*                                                   */
 
 	private void doStart() {
-		log.infof("%nStarted Updating Catalogs. Available Processors = %d%n", PROCESSORS);
+		log.infof("%nStarted Updating Catalogs  ", "");
+		log.addTimeStamp();
+
+		log.infof("Available Processors = %d%n", PROCESSORS);
 		activeList = lblActiveTypeFile.getText();
+		log.infof("Active Type List : %s%n", activeList);
+		log.special(targetTypesRegex);
+		log.addNL(2);
 		netSkipModel = getNetSkip();
 		netTargetModel = getNetTargets();
 		for (Path path : netTargetModel) {
 			File folder = path.toFile();
-			log.infof("netTargetModel : %s%n", folder.getAbsolutePath());
+			log.infof("Target Folder : %s%n", folder.getAbsolutePath());
 			ForkJoinPool poolUpdateCatalog = new ForkJoinPool(PROCESSORS);
 			poolUpdateCatalog.execute(new UpdateCatalog(folder));
 			while (!poolUpdateCatalog.isQuiescent()) {
@@ -181,6 +188,10 @@ public class DeDup {
 		analyzeMainTable();
 
 		setActionButtonsState(true);
+		log.infof("Finished Analysis  ", "");
+		log.addTimeStamp();
+		log.addNL();
+
 	}// doStart
 
 	private void analyzeMainTable() {
@@ -593,7 +604,7 @@ public class DeDup {
 			for (String targetSuffix : targetSuffixes) {
 				sj.add(targetSuffix.trim());
 			} // for
-			String targetTypesRegex = sj.toString();
+			targetTypesRegex = sj.toString();
 			patternTargets = Pattern.compile(targetTypesRegex);
 
 		} catch (Exception e) {
@@ -770,6 +781,12 @@ public class DeDup {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
+		ImageIcon startIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
+		ImageIcon printIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer.png")));
+
+		ImageIcon copyIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/copy.png")));
+		ImageIcon deleteIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/delete.png")));
+		ImageIcon moveIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/move.png")));
 
 		frameDeDup = new JFrame();
 
@@ -782,7 +799,8 @@ public class DeDup {
 				appClose();
 			}// windowClosing
 		});
-		frameDeDup.setIconImage(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png")));
+
+	frameDeDup.setIconImage(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png")));
 
 		frameDeDup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
@@ -827,7 +845,7 @@ public class DeDup {
 		gbc_verticalStrut.gridy = 0;
 		panelTop.add(verticalStrut, gbc_verticalStrut);
 		// icon 22x22 png
-		JButton btnStartTB = new JButton(new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png"))));
+		JButton btnStartTB = new JButton(startIcon);
 		btnStartTB.addActionListener(adapterDeDup);
 		btnStartTB.setActionCommand(BTN_START);
 		btnStartTB.setToolTipText("Start Analysis");
@@ -917,7 +935,7 @@ public class DeDup {
 		gbl_panelMWR0.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panelMWR0.setLayout(gbl_panelMWR0);
 
-		JButton btnStart = new JButton("Start");
+		JButton btnStart = new JButton("Start",startIcon);
 		btnStart.setToolTipText("Start Analysis");
 		btnStart.addActionListener(adapterDeDup);
 		btnStart.setActionCommand(BTN_START);
@@ -928,7 +946,7 @@ public class DeDup {
 		gbc_btnStart.gridy = 1;
 		panelMWR0.add(btnStart, gbc_btnStart);
 
-		JButton btnPrintResult = new JButton("Print Result");
+		JButton btnPrintResult = new JButton("Print Result",printIcon);
 		btnPrintResult.addActionListener(adapterDeDup);
 		btnPrintResult.setActionCommand(BTN_PRINT_RESULTS);
 		GridBagConstraints gbc_btnPrintResult = new GridBagConstraints();
@@ -1030,7 +1048,7 @@ public class DeDup {
 		gbl_panelMWR3.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 		panelMWR3.setLayout(gbl_panelMWR3);
 
-		btnCopy = new JButton("Copy");
+		btnCopy = new JButton("Copy",copyIcon);
 		btnCopy.addActionListener(adapterDeDup);
 		btnCopy.setActionCommand(BTN_COPY);
 		GridBagConstraints gbc_btnCopy = new GridBagConstraints();
@@ -1040,7 +1058,7 @@ public class DeDup {
 		gbc_btnCopy.gridy = 1;
 		panelMWR3.add(btnCopy, gbc_btnCopy);
 
-		btnMove = new JButton("Move");
+		btnMove = new JButton("Move",moveIcon);
 		btnMove.addActionListener(adapterDeDup);
 		btnMove.setActionCommand(BTN_MOVE);
 		GridBagConstraints gbc_btnMove = new GridBagConstraints();
@@ -1050,7 +1068,7 @@ public class DeDup {
 		gbc_btnMove.gridy = 3;
 		panelMWR3.add(btnMove, gbc_btnMove);
 
-		btnDelete = new JButton("Delete");
+		btnDelete = new JButton("Delete",deleteIcon);
 		btnDelete.addActionListener(adapterDeDup);
 		btnDelete.setActionCommand(BTN_DELETE);
 		GridBagConstraints gbc_btnDelete = new GridBagConstraints();
@@ -1725,9 +1743,9 @@ public class DeDup {
 				ois.close();
 				fis.close();
 			} catch (ClassNotFoundException cnfe) {
-				log.infof("Could not get Catalog class for : " + catalogFile.getParentFile().toString());
+				log.errorf("Could not get Catalog class for : %s%n", catalogFile.getParentFile().toString());
 			} catch (FileNotFoundException fnfe) {
-				log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+//				log.infof("Could not get catalog for : %s%n", catalogFile.getParentFile().toString());
 			} catch (IOException ioe) {
 				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
@@ -1741,7 +1759,6 @@ public class DeDup {
 			Collection<FileProfile> profiles = catalog.values();
 
 			for (FileProfile profile : profiles) {
-				Integer value;
 				synchronized (idLock) {
 					hashKey = profile.getHashKey();
 					
@@ -1750,12 +1767,6 @@ public class DeDup {
 						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());	
 					}//if
 					
-					
-//					if (!hashCounts.containsKey(hashKey)) {
-//						hashCounts.put(hashKey, 0);
-//						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());
-//					} // if new hashKey
-
 				} // synchronized (idLock)
 				hashCounts.put(hashKey, hashCounts.get(hashKey) + 1);
 				mainTableModel.addRow(profile, hashIDs.get(hashKey));
@@ -1847,9 +1858,9 @@ public class DeDup {
 				ois.close();
 				fis.close();
 			} catch (ClassNotFoundException cnfe) {
-				log.infof("Could not get Catalog class for : " + catalogFile.getParentFile().toString());
+				log.infof("Could not get Catalog class for : %s%n", catalogFile.getParentFile().toString());
 			} catch (FileNotFoundException fnfe) {
-				log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+				log.infof("Could not get catalog for : %s%n", catalogFile.getParentFile().toString());
 			} catch (IOException ioe) {
 				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
@@ -1864,7 +1875,7 @@ public class DeDup {
 				fos.close();
 				oos.close();
 			} catch (FileNotFoundException fnfe) {
-				log.infof("Could not get catalog for : " + catalogFile.getParentFile().toString());
+				log.infof("Could not get catalog for : %s%n", catalogFile.getParentFile().toString());
 			} catch (IOException ioe) {
 				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
