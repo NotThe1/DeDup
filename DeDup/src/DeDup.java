@@ -147,7 +147,8 @@ public class DeDup {
 
 	private void doStart() {
 		log.infof("%nStarted Updating Catalogs  ", "");
-		log.addTimeStamp();
+//		log.addTimeStamp();
+		Date startTime = log.addTimeStamp("Start :");
 
 		log.infof("Available Processors = %d%n", PROCESSORS);
 		activeList = lblActiveTypeFile.getText();
@@ -190,7 +191,8 @@ public class DeDup {
 
 		setActionButtonsState(true);
 		log.infof("Finished Analysis  ", "");
-		log.addTimeStamp();
+//		log.addTimeStamp();
+		log.addElapsedTime(startTime, "End :");
 		log.addNL();
 
 	}// doStart
@@ -792,7 +794,7 @@ public class DeDup {
 
 		frameDeDup = new JFrame();
 
-		frameDeDup.setTitle("DeDup -   version 0.0");
+		frameDeDup.setTitle("DeDup -   version 1.0");
 
 //		frameDeDup.setBounds(100, 100, 695, 789);
 		frameDeDup.addWindowListener(new WindowAdapter() {
@@ -859,6 +861,7 @@ public class DeDup {
 		panelTop.add(btnStartTB, gbc_btnStartTB);
 
 		JButton btnTest1 = new JButton("Test 1");
+		btnTest1.setVisible(false);
 		btnTest1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				if (mainTable.getRowCount() > 0) {
