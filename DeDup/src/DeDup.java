@@ -111,6 +111,7 @@ public class DeDup {
 	public static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
+	private ConcurrentHashMap<String, Integer> typeCounts = new ConcurrentHashMap<String, Integer>();
 
 	private List<Path> netSkipModel;
 	private List<Path> netTargetModel;
@@ -745,7 +746,8 @@ public class DeDup {
 		cbTypeFiles.addItemListener(adapterDeDup);
 
 		Preferences myPrefs = getPreferences();
-		frameDeDup.setSize(786, 900);
+
+		frameDeDup.setSize(myPrefs.getInt("Width", 650),myPrefs.getInt("Height", 900));
 		frameDeDup.setLocation(myPrefs.getInt("LocX", 100), myPrefs.getInt("LocY", 100));
 		splitPaneTargets.setDividerLocation(myPrefs.getInt("splitPaneTargets.divederLoc", 150));
 		tabbedPane.setSelectedIndex(myPrefs.getInt("tabbedPaneSelectedIndex", 2));
@@ -792,7 +794,7 @@ public class DeDup {
 
 		frameDeDup.setTitle("DeDup -   version 0.0");
 
-		frameDeDup.setBounds(100, 100, 695, 789);
+//		frameDeDup.setBounds(100, 100, 695, 789);
 		frameDeDup.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent arg0) {
@@ -915,16 +917,17 @@ public class DeDup {
 		panelMajorWork.add(panelMajorWorkLeft, gbc_panelMajorWorkLeft);
 		GridBagLayout gbl_panelMajorWorkLeft = new GridBagLayout();
 		gbl_panelMajorWorkLeft.columnWidths = new int[] { 0, 0 };
-		gbl_panelMajorWorkLeft.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
+		gbl_panelMajorWorkLeft.rowHeights = new int[] { 0, 0, 0, 0, 0, 10, 0, 0 };
 		gbl_panelMajorWorkLeft.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panelMajorWorkLeft.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panelMajorWorkLeft.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, Double.MIN_VALUE };
 		panelMajorWorkLeft.setLayout(gbl_panelMajorWorkLeft);
 
 		JPanel panelMWR0 = new JPanel();
 		panelMWR0.setBorder(new BevelBorder(BevelBorder.RAISED, null, null, null, null));
 		GridBagConstraints gbc_panelMWR0 = new GridBagConstraints();
+		gbc_panelMWR0.anchor = GridBagConstraints.NORTH;
 		gbc_panelMWR0.insets = new Insets(0, 0, 5, 0);
-		gbc_panelMWR0.fill = GridBagConstraints.BOTH;
+		gbc_panelMWR0.fill = GridBagConstraints.HORIZONTAL;
 		gbc_panelMWR0.gridx = 0;
 		gbc_panelMWR0.gridy = 0;
 		panelMajorWorkLeft.add(panelMWR0, gbc_panelMWR0);
@@ -964,10 +967,11 @@ public class DeDup {
 		panelMajorWorkLeft.add(verticalStrut_17, gbc_verticalStrut_17);
 
 		panelMWR2 = new JPanel();
-		panelMWR2.setBorder(new BevelBorder(BevelBorder.RAISED, null, null, null, null));
+		panelMWR2.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Results", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
 		GridBagConstraints gbc_panelMWR2 = new GridBagConstraints();
+		gbc_panelMWR2.anchor = GridBagConstraints.NORTH;
 		gbc_panelMWR2.insets = new Insets(0, 0, 5, 0);
-		gbc_panelMWR2.fill = GridBagConstraints.BOTH;
+		gbc_panelMWR2.fill = GridBagConstraints.HORIZONTAL;
 		gbc_panelMWR2.gridx = 0;
 		gbc_panelMWR2.gridy = 2;
 		panelMajorWorkLeft.add(panelMWR2, gbc_panelMWR2);
@@ -1035,9 +1039,11 @@ public class DeDup {
 		panelMajorWorkLeft.add(verticalStrut_21, gbc_verticalStrut_21);
 
 		JPanel panelMWR3 = new JPanel();
-		panelMWR3.setBorder(new BevelBorder(BevelBorder.RAISED, null, null, null, null));
+		panelMWR3.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Actions", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
 		GridBagConstraints gbc_panelMWR3 = new GridBagConstraints();
-		gbc_panelMWR3.fill = GridBagConstraints.BOTH;
+		gbc_panelMWR3.insets = new Insets(0, 0, 5, 0);
+		gbc_panelMWR3.anchor = GridBagConstraints.NORTH;
+		gbc_panelMWR3.fill = GridBagConstraints.HORIZONTAL;
 		gbc_panelMWR3.gridx = 0;
 		gbc_panelMWR3.gridy = 4;
 		panelMajorWorkLeft.add(panelMWR3, gbc_panelMWR3);

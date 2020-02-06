@@ -23,7 +23,8 @@ public class ReadCatalog {
 	}//main
 	
 	public void doIt() {
-		Path path = Paths.get("C:\\Temp\\DeDupTest");
+//		Path path = Paths.get("C:\\Temp\\DeDupTest");
+		Path path = Paths.get("E:\\Meta_Pictures\\2018 Europe");
 		try {
 			Files.walkFileTree(path, new MyWalker());
 		} catch (IOException ioe) {
