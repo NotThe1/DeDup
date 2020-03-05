@@ -111,7 +111,8 @@ public class DeDup {
 	public static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
-//	private ConcurrentHashMap<String, Integer> typeCounts = new ConcurrentHashMap<String, Integer>();
+	// private ConcurrentHashMap<String, Integer> typeCounts = new
+	// ConcurrentHashMap<String, Integer>();
 
 	private List<Path> netSkipModel;
 	private List<Path> netTargetModel;
@@ -147,7 +148,7 @@ public class DeDup {
 
 	private void doStart() {
 		log.infof("%nStarted Updating Catalogs  ", "");
-//		log.addTimeStamp();
+		// log.addTimeStamp();
 		Date startTime = log.addTimeStamp("Start :");
 
 		log.infof("Available Processors = %d%n", PROCESSORS);
@@ -191,7 +192,7 @@ public class DeDup {
 
 		setActionButtonsState(true);
 		log.infof("Finished Analysis  ", "");
-//		log.addTimeStamp();
+		// log.addTimeStamp();
 		log.addElapsedTime(startTime, "End :");
 		log.addNL();
 
@@ -316,7 +317,7 @@ public class DeDup {
 			return;
 		} // if bad LeastCommonDirectory
 		log.infof("%n%ntargetFolder : %s%nlcd  : %s%n%n", copyMoveDirectory, lcd);
-		
+
 		String fileName;
 		String sourceDirectory;
 		String destinationDirectory;
@@ -749,7 +750,7 @@ public class DeDup {
 
 		Preferences myPrefs = getPreferences();
 
-		frameDeDup.setSize(myPrefs.getInt("Width", 650),myPrefs.getInt("Height", 900));
+		frameDeDup.setSize(myPrefs.getInt("Width", 650), myPrefs.getInt("Height", 900));
 		frameDeDup.setLocation(myPrefs.getInt("LocX", 100), myPrefs.getInt("LocY", 100));
 		splitPaneTargets.setDividerLocation(myPrefs.getInt("splitPaneTargets.divederLoc", 150));
 		tabbedPane.setSelectedIndex(myPrefs.getInt("tabbedPaneSelectedIndex", 2));
@@ -785,18 +786,21 @@ public class DeDup {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		ImageIcon startIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
-		ImageIcon printIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer.png")));
+		ImageIcon startIcon = new ImageIcon(
+				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
+		ImageIcon printIcon = new ImageIcon(
+				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer.png")));
 
 		ImageIcon copyIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/copy.png")));
-		ImageIcon deleteIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/delete.png")));
+		ImageIcon deleteIcon = new ImageIcon(
+				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/delete.png")));
 		ImageIcon moveIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/move.png")));
 
 		frameDeDup = new JFrame();
 
 		frameDeDup.setTitle("DeDup -   version 1.1");
 
-//		frameDeDup.setBounds(100, 100, 695, 789);
+		// frameDeDup.setBounds(100, 100, 695, 789);
 		frameDeDup.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowClosing(WindowEvent arg0) {
@@ -804,7 +808,7 @@ public class DeDup {
 			}// windowClosing
 		});
 
-	frameDeDup.setIconImage(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png")));
+		frameDeDup.setIconImage(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png")));
 
 		frameDeDup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
@@ -941,7 +945,7 @@ public class DeDup {
 		gbl_panelMWR0.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		panelMWR0.setLayout(gbl_panelMWR0);
 
-		JButton btnStart = new JButton("Start",startIcon);
+		JButton btnStart = new JButton("Start", startIcon);
 		btnStart.setToolTipText("Start Analysis");
 		btnStart.addActionListener(adapterDeDup);
 		btnStart.setActionCommand(BTN_START);
@@ -952,7 +956,7 @@ public class DeDup {
 		gbc_btnStart.gridy = 1;
 		panelMWR0.add(btnStart, gbc_btnStart);
 
-		JButton btnPrintResult = new JButton("Print Result",printIcon);
+		JButton btnPrintResult = new JButton("Print Result", printIcon);
 		btnPrintResult.addActionListener(adapterDeDup);
 		btnPrintResult.setActionCommand(BTN_PRINT_RESULTS);
 		GridBagConstraints gbc_btnPrintResult = new GridBagConstraints();
@@ -970,7 +974,8 @@ public class DeDup {
 		panelMajorWorkLeft.add(verticalStrut_17, gbc_verticalStrut_17);
 
 		panelMWR2 = new JPanel();
-		panelMWR2.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Results", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
+		panelMWR2.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Results",
+				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
 		GridBagConstraints gbc_panelMWR2 = new GridBagConstraints();
 		gbc_panelMWR2.anchor = GridBagConstraints.NORTH;
 		gbc_panelMWR2.insets = new Insets(0, 0, 5, 0);
@@ -1042,7 +1047,8 @@ public class DeDup {
 		panelMajorWorkLeft.add(verticalStrut_21, gbc_verticalStrut_21);
 
 		JPanel panelMWR3 = new JPanel();
-		panelMWR3.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Actions", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
+		panelMWR3.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Actions",
+				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, null));
 		GridBagConstraints gbc_panelMWR3 = new GridBagConstraints();
 		gbc_panelMWR3.insets = new Insets(0, 0, 5, 0);
 		gbc_panelMWR3.anchor = GridBagConstraints.NORTH;
@@ -1057,7 +1063,7 @@ public class DeDup {
 		gbl_panelMWR3.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
 		panelMWR3.setLayout(gbl_panelMWR3);
 
-		btnCopy = new JButton("Copy",copyIcon);
+		btnCopy = new JButton("Copy", copyIcon);
 		btnCopy.addActionListener(adapterDeDup);
 		btnCopy.setActionCommand(BTN_COPY);
 		GridBagConstraints gbc_btnCopy = new GridBagConstraints();
@@ -1067,7 +1073,7 @@ public class DeDup {
 		gbc_btnCopy.gridy = 1;
 		panelMWR3.add(btnCopy, gbc_btnCopy);
 
-		btnMove = new JButton("Move",moveIcon);
+		btnMove = new JButton("Move", moveIcon);
 		btnMove.addActionListener(adapterDeDup);
 		btnMove.setActionCommand(BTN_MOVE);
 		GridBagConstraints gbc_btnMove = new GridBagConstraints();
@@ -1077,7 +1083,7 @@ public class DeDup {
 		gbc_btnMove.gridy = 3;
 		panelMWR3.add(btnMove, gbc_btnMove);
 
-		btnDelete = new JButton("Delete",deleteIcon);
+		btnDelete = new JButton("Delete", deleteIcon);
 		btnDelete.addActionListener(adapterDeDup);
 		btnDelete.setActionCommand(BTN_DELETE);
 		GridBagConstraints gbc_btnDelete = new GridBagConstraints();
@@ -1444,22 +1450,22 @@ public class DeDup {
 			return this.isChild;
 		}// isChild
 
-//		// Descending sort
-@Override
-public int compareTo(PathAndCount PandC) {
+		// // Descending sort
+		@Override
+		public int compareTo(PathAndCount PandC) {
 			return PandC.getCount() - this.getCount();
 		}// compareTo Collections.sort(list)
 
-@Override 
-public boolean equals(Object PandC) {
-			return (PandC != null) && (PandC instanceof PathAndCount) && ((PathAndCount) (PandC)).getCount() - this.getCount()==0?true:false;
-		}//equals 
+		@Override
+		public boolean equals(Object PandC) {
+			return (PandC != null) && (PandC instanceof PathAndCount)
+					&& ((PathAndCount) (PandC)).getCount() - this.getCount() == 0 ? true : false;
+		}// equals
 
 		@Override
 		public int hashCode() {
 			return super.hashCode();
-		}//hashCode
-		
+		}// hashCode
 
 	}// class PathAndCount
 
@@ -1754,7 +1760,8 @@ public boolean equals(Object PandC) {
 			} catch (ClassNotFoundException cnfe) {
 				log.errorf("Could not get Catalog class for : %s%n", catalogFile.getParentFile().toString());
 			} catch (FileNotFoundException fnfe) {
-//				log.infof("Could not get catalog for : %s%n", catalogFile.getParentFile().toString());
+				// log.infof("Could not get catalog for : %s%n",
+				// catalogFile.getParentFile().toString());
 			} catch (IOException ioe) {
 				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
@@ -1770,12 +1777,11 @@ public boolean equals(Object PandC) {
 			for (FileProfile profile : profiles) {
 				synchronized (idLock) {
 					hashKey = profile.getHashKey();
-					
-					
-					if(hashCounts.putIfAbsent(hashKey, 0)==null) {
-						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());	
-					}//if
-					
+
+					if (hashCounts.putIfAbsent(hashKey, 0) == null) {
+						hashIDs.put(hashKey, DeDup.fileID.getAndIncrement());
+					} // if
+
 				} // synchronized (idLock)
 				hashCounts.put(hashKey, hashCounts.get(hashKey) + 1);
 				mainTableModel.addRow(profile, hashIDs.get(hashKey));
