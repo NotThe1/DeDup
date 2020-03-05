@@ -111,7 +111,7 @@ public class DeDup {
 	public static final AtomicInteger fileID = new AtomicInteger(0);
 	private ConcurrentHashMap<String, Integer> hashIDs = new ConcurrentHashMap<String, Integer>();
 	private ConcurrentHashMap<String, Integer> hashCounts = new ConcurrentHashMap<String, Integer>();
-	private ConcurrentHashMap<String, Integer> typeCounts = new ConcurrentHashMap<String, Integer>();
+//	private ConcurrentHashMap<String, Integer> typeCounts = new ConcurrentHashMap<String, Integer>();
 
 	private List<Path> netSkipModel;
 	private List<Path> netTargetModel;
@@ -794,7 +794,7 @@ public class DeDup {
 
 		frameDeDup = new JFrame();
 
-		frameDeDup.setTitle("DeDup -   version 1.0");
+		frameDeDup.setTitle("DeDup -   version 1.1");
 
 //		frameDeDup.setBounds(100, 100, 695, 789);
 		frameDeDup.addWindowListener(new WindowAdapter() {
@@ -1444,21 +1444,21 @@ public class DeDup {
 			return this.isChild;
 		}// isChild
 
-		@Override // Descending sort
-		public int compareTo(PathAndCount PandC) {
+//		// Descending sort
+@Override
+public int compareTo(PathAndCount PandC) {
 			return PandC.getCount() - this.getCount();
 		}// compareTo Collections.sort(list)
 
-//		public boolean equals(PathAndCount pac) {
-//			
-//			return compareTo(pac)== 0;
-//		}
+@Override 
+public boolean equals(Object PandC) {
+			return (PandC != null) && (PandC instanceof PathAndCount) && ((PathAndCount) (PandC)).getCount() - this.getCount()==0?true:false;
+		}//equals 
 
 		@Override
 		public int hashCode() {
-			// TODO Auto-generated method stub
 			return super.hashCode();
-		}
+		}//hashCode
 		
 
 	}// class PathAndCount
