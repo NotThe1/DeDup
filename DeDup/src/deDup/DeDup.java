@@ -109,24 +109,10 @@ import appLogger.AppLogger;
 
 public class DeDup {
 
-	String title = "DeDup -   version 1.2";
+	String title = "DeDup -   version 1.3";
 
-	// Image classImage =
-	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png"));
-	//
-	// ImageIcon startIcon = new ImageIcon(
-	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
-	// ImageIcon printIcon = new ImageIcon(
-	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer.png")));
-	// ImageIcon copyIcon = new
-	// ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/copy.png")));
-	// ImageIcon deleteIcon = new ImageIcon(
-	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/delete.png")));
-	// ImageIcon moveIcon = new
-	// ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/move.png")));
-
+	/* @formatter:off */
 	Image classImage = Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png"));
-
 	ImageIcon startIcon = new ImageIcon(
 			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/mail-mark-task.png")));
 	ImageIcon printIcon = new ImageIcon(
@@ -139,7 +125,8 @@ public class DeDup {
 			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-paste.png")));
 	ImageIcon clearIcon = new ImageIcon(
 			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-clear-2.png")));
-
+	/* @formatter:on */
+	
 	private AppLogger log = AppLogger.getInstance();
 	private AdapterDeDup adapterDeDup = new AdapterDeDup();
 
@@ -240,6 +227,57 @@ public class DeDup {
 		log.addNL();
 
 	}// doStart
+
+	private void doRemoveCatalogs() {
+		activeList = lblActiveTypeFile.getText();
+		log.infof("%nRemoving Catalogs for list: %s%n", activeList);
+		// log.addTimeStamp();
+		Date startTime = log.addTimeStamp("Start :");
+
+		netTargetModel = getNetTargets();
+		for (Path path : netTargetModel) {
+			removeCatalogs(path.toFile());
+		} // for
+
+		log.infof("Finished removing List: %s  %n", activeList);
+		// log.addTimeStamp();
+		// log.addElapsedTime(startTime, "End :");
+		log.getElapsedTime(startTime);
+		log.addNL();
+
+	}// doRemoveCatalogs
+
+	private void removeCatalogs(File folder) {
+
+		File catalogFile = new File(folder, LIST_PREFIX + activeList);
+
+		if (skipListModel.contains(folder)) {
+			log.infof("[CensusTaker.compute] skipping: %s%n", folder);
+			return;
+		} // if we need to skip
+
+		try {
+			Files.deleteIfExists(Paths.get(catalogFile.getAbsolutePath()));
+		} catch (IOException e) {
+			log.errorf("Could not delete %s%s in folder %s%n", LIST_PREFIX, activeList, folder.toString());
+		} // try
+
+		/* Find all the sub directories in this directory */
+		File[] directories = folder.listFiles(new FileFilter() {
+			@Override
+			public boolean accept(File fileContent) {
+				return fileContent.isDirectory();
+			}// accept
+		});
+
+		/* process any & all sub directories */
+		if (directories != null) {
+			for (File directory : directories) {
+				removeCatalogs(directory);
+			} // for each directory
+		} // if directories
+
+	}// removeCatalogs
 
 	private void analyzeMainTable() {
 		int hashIndex = mainTableModel.getColumnIndex(MainTableModel.HASH_KEY);
@@ -894,17 +932,20 @@ public class DeDup {
 		panelTop.add(btnStartTB, gbc_btnStartTB);
 
 		JButton btnTest1 = new JButton("Test 1");
-		btnTest1.setVisible(false);
 		btnTest1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-				if (mainTable.getRowCount() > 0) {
 
-					DistinctFilter filter = new DistinctFilter();
+				doRemoveCatalogs();
 
-					TableRowSorter<MainTableModel> tableRowSorter = new TableRowSorter<MainTableModel>(mainTableModel);
-					tableRowSorter.setRowFilter(filter);
-					mainTable.setRowSorter(tableRowSorter);
-				} // if rows
+				// if (mainTable.getRowCount() > 0) {
+				//
+				// DistinctFilter filter = new DistinctFilter();
+				//
+				// TableRowSorter<MainTableModel> tableRowSorter = new
+				// TableRowSorter<MainTableModel>(mainTableModel);
+				// tableRowSorter.setRowFilter(filter);
+				// mainTable.setRowSorter(tableRowSorter);
+				// } // if rows
 			}// actionPerformed
 		});
 		GridBagConstraints gbc_btnTest1 = new GridBagConstraints();
@@ -1842,7 +1883,7 @@ public class DeDup {
 
 		@Override
 		protected void compute() {
-			if (skipListModel.contains(folder.toPath())) {
+			if (skipListModel.contains(folder)) {
 				log.infof("[CensusTaker.compute] skipping: %s%n", folder);
 				return;
 			} // if we need to skip
