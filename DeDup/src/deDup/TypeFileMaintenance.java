@@ -1,3 +1,4 @@
+package deDup;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -41,6 +42,8 @@ import javax.swing.border.BevelBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+
+import appLogger.AppLogger;
 
 public class TypeFileMaintenance extends JDialog {
 	/**

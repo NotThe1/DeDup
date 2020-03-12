@@ -1,3 +1,4 @@
+package deDup;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -94,6 +95,8 @@ import javax.swing.table.TableColumn;
 import javax.swing.table.TableRowSorter;
 import javax.swing.text.StyledDocument;
 
+import appLogger.AppLogger;
+
 //import identic.ActionTableModel;
 
 public class DeDup {
@@ -181,7 +184,7 @@ public class DeDup {
 			ForkJoinPool poolUnify = new ForkJoinPool(PROCESSORS);
 			poolUnify.execute(new Unify(folder));
 			while (!poolUnify.isQuiescent()) {
-				// psuedo join
+				// Pseudo join
 			} // while
 		} // for each
 
@@ -191,9 +194,10 @@ public class DeDup {
 		analyzeMainTable();
 
 		setActionButtonsState(true);
-		log.infof("Finished Analysis  ", "");
+		log.infof("Finished Analysis  %n", "");
 		// log.addTimeStamp();
-		log.addElapsedTime(startTime, "End :");
+//		log.addElapsedTime(startTime, "End :");
+		log.getElapsedTime(startTime);
 		log.addNL();
 
 	}// doStart
@@ -786,6 +790,8 @@ public class DeDup {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
+		// icon 22x22 png
+
 		ImageIcon startIcon = new ImageIcon(
 				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
 		ImageIcon printIcon = new ImageIcon(
