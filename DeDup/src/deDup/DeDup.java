@@ -1,4 +1,5 @@
 package deDup;
+
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -6,6 +7,7 @@ import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Toolkit;
@@ -98,8 +100,45 @@ import javax.swing.text.StyledDocument;
 import appLogger.AppLogger;
 
 //import identic.ActionTableModel;
+/*
+ * all icons from SourceForge\icons\png\22X22\actions
+ * except:
+ *        SourceForge\icons\png\22X22\devices\printer-7.png
+ * except SourceForge\icons\png\128X128\kcmcwm.png
+ */
 
 public class DeDup {
+
+	String title = "DeDup -   version 1.2";
+
+	// Image classImage =
+	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png"));
+	//
+	// ImageIcon startIcon = new ImageIcon(
+	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
+	// ImageIcon printIcon = new ImageIcon(
+	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer.png")));
+	// ImageIcon copyIcon = new
+	// ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/copy.png")));
+	// ImageIcon deleteIcon = new ImageIcon(
+	// Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/delete.png")));
+	// ImageIcon moveIcon = new
+	// ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/move.png")));
+
+	Image classImage = Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png"));
+
+	ImageIcon startIcon = new ImageIcon(
+			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/mail-mark-task.png")));
+	ImageIcon printIcon = new ImageIcon(
+			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer-7.png")));
+	ImageIcon copyIcon = new ImageIcon(
+			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-copy-6.png")));
+	ImageIcon deleteIcon = new ImageIcon(
+			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-delete-2.png")));
+	ImageIcon moveIcon = new ImageIcon(
+			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-paste.png")));
+	ImageIcon clearIcon = new ImageIcon(
+			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-clear-2.png")));
 
 	private AppLogger log = AppLogger.getInstance();
 	private AdapterDeDup adapterDeDup = new AdapterDeDup();
@@ -196,7 +235,7 @@ public class DeDup {
 		setActionButtonsState(true);
 		log.infof("Finished Analysis  %n", "");
 		// log.addTimeStamp();
-//		log.addElapsedTime(startTime, "End :");
+		// log.addElapsedTime(startTime, "End :");
 		log.getElapsedTime(startTime);
 		log.addNL();
 
@@ -790,22 +829,10 @@ public class DeDup {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
-		// icon 22x22 png
-
-		ImageIcon startIcon = new ImageIcon(
-				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/startAnalysis.png")));
-		ImageIcon printIcon = new ImageIcon(
-				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/printer.png")));
-
-		ImageIcon copyIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/copy.png")));
-		ImageIcon deleteIcon = new ImageIcon(
-				Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/delete.png")));
-		ImageIcon moveIcon = new ImageIcon(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/move.png")));
-
 		frameDeDup = new JFrame();
-
-		frameDeDup.setTitle("DeDup -   version 1.1");
-
+		frameDeDup.setTitle(title);
+		frameDeDup.setIconImage(classImage);
+		frameDeDup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		// frameDeDup.setBounds(100, 100, 695, 789);
 		frameDeDup.addWindowListener(new WindowAdapter() {
 			@Override
@@ -813,10 +840,6 @@ public class DeDup {
 				appClose();
 			}// windowClosing
 		});
-
-		frameDeDup.setIconImage(Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png")));
-
-		frameDeDup.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		GridBagLayout gridBagLayout = new GridBagLayout();
 		gridBagLayout.columnWidths = new int[] { 0, 0 };
 		gridBagLayout.rowHeights = new int[] { 0, 0 };
