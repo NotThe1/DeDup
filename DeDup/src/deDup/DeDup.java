@@ -109,7 +109,7 @@ import appLogger.AppLogger;
 
 public class DeDup {
 
-	String title = "DeDup -   version 1.3";
+	String title = "DeDup -   version 1.4";
 
 	/* @formatter:off */
 	Image classImage = Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png"));
@@ -126,7 +126,7 @@ public class DeDup {
 	ImageIcon clearIcon = new ImageIcon(
 			Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/edit-clear-2.png")));
 	/* @formatter:on */
-	
+
 	private AppLogger log = AppLogger.getInstance();
 	private AdapterDeDup adapterDeDup = new AdapterDeDup();
 
@@ -178,8 +178,8 @@ public class DeDup {
 	private void doStart() {
 		log.infof("%nStarted Updating Catalogs  ", "");
 		// log.addTimeStamp();
-		Date startTime = log.addTimeStamp("Start :");
-
+//		Date startTime = log.addTimeStamp("Start :");
+		Date startTime = new Date();
 		log.infof("Available Processors = %d%n", PROCESSORS);
 		activeList = lblActiveTypeFile.getText();
 		log.infof("Active Type List : %s%n", activeList);
@@ -232,7 +232,8 @@ public class DeDup {
 		activeList = lblActiveTypeFile.getText();
 		log.infof("%nRemoving Catalogs for list: %s%n", activeList);
 		// log.addTimeStamp();
-		Date startTime = log.addTimeStamp("Start :");
+//		Date startTime = log.addTimeStamp("Start :");
+		Date startTime = new Date();
 
 		netTargetModel = getNetTargets();
 		for (Path path : netTargetModel) {
@@ -319,12 +320,6 @@ public class DeDup {
 			e.printStackTrace();
 		} // try
 	}// doPrintResults
-
-	// private void doCopy() {
-	// }//doCopy
-	//
-	// private void doMove() {
-	// }//doMove
 
 	/* TODO need to clean this up later */
 	private String getLeastCommonDirectory(SortedSet<String> targets) {
@@ -736,7 +731,7 @@ public class DeDup {
 		} // if exists
 
 		File[] files = appDirectory.listFiles(new ListFilter(TYPEFILE));
-
+		
 		if (files == null || files.length == 0) {
 			for (String file : INITIAL_LISTFILES) {
 				try {
@@ -907,9 +902,9 @@ public class DeDup {
 		gbc_panelTop.gridy = 0;
 		panel.add(panelTop, gbc_panelTop);
 		GridBagLayout gbl_panelTop = new GridBagLayout();
-		gbl_panelTop.columnWidths = new int[] { 0, 0, 0, 0 };
+		gbl_panelTop.columnWidths = new int[] { 0, 0, 0, 0, 0 };
 		gbl_panelTop.rowHeights = new int[] { 0, 0 };
-		gbl_panelTop.columnWeights = new double[] { 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		gbl_panelTop.columnWeights = new double[] { 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
 		gbl_panelTop.rowWeights = new double[] { 0.0, Double.MIN_VALUE };
 		panelTop.setLayout(gbl_panelTop);
 
@@ -932,25 +927,25 @@ public class DeDup {
 		panelTop.add(btnStartTB, gbc_btnStartTB);
 
 		JButton btnTest1 = new JButton("Test 1");
+		btnTest1.setVisible(false);
 		btnTest1.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
-
-				doRemoveCatalogs();
-
-				// if (mainTable.getRowCount() > 0) {
-				//
-				// DistinctFilter filter = new DistinctFilter();
-				//
-				// TableRowSorter<MainTableModel> tableRowSorter = new
-				// TableRowSorter<MainTableModel>(mainTableModel);
-				// tableRowSorter.setRowFilter(filter);
-				// mainTable.setRowSorter(tableRowSorter);
-				// } // if rows
+				// Something
 			}// actionPerformed
 		});
+
+		JButton btnRemoveTB = new JButton(clearIcon);
+		btnRemoveTB.setToolTipText("Remove Catalogs");
+		btnRemoveTB.addActionListener(adapterDeDup);
+		btnRemoveTB.setActionCommand(BTN_REMOVE_CATALOGS);
+		GridBagConstraints gbc_btnRemoveTB = new GridBagConstraints();
+		gbc_btnRemoveTB.insets = new Insets(0, 0, 0, 5);
+		gbc_btnRemoveTB.gridx = 2;
+		gbc_btnRemoveTB.gridy = 0;
+		panelTop.add(btnRemoveTB, gbc_btnRemoveTB);
 		GridBagConstraints gbc_btnTest1 = new GridBagConstraints();
 		gbc_btnTest1.anchor = GridBagConstraints.NORTH;
-		gbc_btnTest1.gridx = 2;
+		gbc_btnTest1.gridx = 3;
 		gbc_btnTest1.gridy = 0;
 		panelTop.add(btnTest1, gbc_btnTest1);
 
@@ -1281,21 +1276,21 @@ public class DeDup {
 		listTargets.setName(LIST_TARGETS);
 		scrollPaneTargets.setViewportView(listTargets);
 
-		JPanel panel_1 = new JPanel();
-		panel_1.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null), "Type Lists",
-				TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
-		GridBagConstraints gbc_panel_1 = new GridBagConstraints();
-		gbc_panel_1.insets = new Insets(0, 0, 0, 5);
-		gbc_panel_1.fill = GridBagConstraints.BOTH;
-		gbc_panel_1.gridx = 0;
-		gbc_panel_1.gridy = 1;
-		panelTargets.add(panel_1, gbc_panel_1);
-		GridBagLayout gbl_panel_1 = new GridBagLayout();
-		gbl_panel_1.columnWidths = new int[] { 0, 0 };
-		gbl_panel_1.rowHeights = new int[] { 0, 0, 0, 0 };
-		gbl_panel_1.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
-		gbl_panel_1.rowWeights = new double[] { 0.0, 0.0, 0.0, Double.MIN_VALUE };
-		panel_1.setLayout(gbl_panel_1);
+		JPanel panelTypeLists = new JPanel();
+		panelTypeLists.setBorder(new TitledBorder(new BevelBorder(BevelBorder.LOWERED, null, null, null, null),
+				"Type Lists", TitledBorder.CENTER, TitledBorder.ABOVE_TOP, null, new Color(0, 0, 0)));
+		GridBagConstraints gbc_panelTypeLists = new GridBagConstraints();
+		gbc_panelTypeLists.insets = new Insets(0, 0, 0, 5);
+		gbc_panelTypeLists.fill = GridBagConstraints.BOTH;
+		gbc_panelTypeLists.gridx = 0;
+		gbc_panelTypeLists.gridy = 1;
+		panelTargets.add(panelTypeLists, gbc_panelTypeLists);
+		GridBagLayout gbl_panelTypeLists = new GridBagLayout();
+		gbl_panelTypeLists.columnWidths = new int[] { 0, 0 };
+		gbl_panelTypeLists.rowHeights = new int[] { 0, 0, 0, 0, 0, 0 };
+		gbl_panelTypeLists.columnWeights = new double[] { 1.0, Double.MIN_VALUE };
+		gbl_panelTypeLists.rowWeights = new double[] { 0.0, 0.0, 0.0, 0.0, 0.0, Double.MIN_VALUE };
+		panelTypeLists.setLayout(gbl_panelTypeLists);
 
 		cbTypeFiles = new JComboBox<String>(modelTypeFiles);
 		cbTypeFiles.setActionCommand(CB_TYPE_FILE);
@@ -1305,23 +1300,43 @@ public class DeDup {
 		gbc_cbTypeFiles.fill = GridBagConstraints.HORIZONTAL;
 		gbc_cbTypeFiles.gridx = 0;
 		gbc_cbTypeFiles.gridy = 0;
-		panel_1.add(cbTypeFiles, gbc_cbTypeFiles);
+		panelTypeLists.add(cbTypeFiles, gbc_cbTypeFiles);
 
 		Component verticalStrut_6 = Box.createVerticalStrut(20);
 		GridBagConstraints gbc_verticalStrut_6 = new GridBagConstraints();
 		gbc_verticalStrut_6.insets = new Insets(0, 0, 5, 0);
 		gbc_verticalStrut_6.gridx = 0;
 		gbc_verticalStrut_6.gridy = 1;
-		panel_1.add(verticalStrut_6, gbc_verticalStrut_6);
+		panelTypeLists.add(verticalStrut_6, gbc_verticalStrut_6);
 
 		JButton btnEditTypeFiles = new JButton("Edit");
 		btnEditTypeFiles.addActionListener(adapterDeDup);
 		btnEditTypeFiles.setActionCommand(BTN_EDIT_TYPEFILES);
 		GridBagConstraints gbc_btnEditTypeFiles = new GridBagConstraints();
+		gbc_btnEditTypeFiles.insets = new Insets(0, 0, 5, 0);
 		gbc_btnEditTypeFiles.fill = GridBagConstraints.HORIZONTAL;
 		gbc_btnEditTypeFiles.gridx = 0;
 		gbc_btnEditTypeFiles.gridy = 2;
-		panel_1.add(btnEditTypeFiles, gbc_btnEditTypeFiles);
+		panelTypeLists.add(btnEditTypeFiles, gbc_btnEditTypeFiles);
+
+		Component verticalStrut_7 = Box.createVerticalStrut(20);
+		verticalStrut_7.setPreferredSize(new Dimension(0, 40));
+		verticalStrut_7.setMinimumSize(new Dimension(0, 40));
+		verticalStrut_7.setMaximumSize(new Dimension(0, 40));
+		GridBagConstraints gbc_verticalStrut_7 = new GridBagConstraints();
+		gbc_verticalStrut_7.insets = new Insets(0, 0, 5, 0);
+		gbc_verticalStrut_7.gridx = 0;
+		gbc_verticalStrut_7.gridy = 3;
+		panelTypeLists.add(verticalStrut_7, gbc_verticalStrut_7);
+
+		JButton btnRemoveCatalogs = new JButton("Remove Catalogs");
+		btnRemoveCatalogs.addActionListener(adapterDeDup);
+		btnRemoveCatalogs.setActionCommand(BTN_REMOVE_CATALOGS);
+		GridBagConstraints gbc_btnRemoveCatalogs = new GridBagConstraints();
+		gbc_btnRemoveCatalogs.fill = GridBagConstraints.HORIZONTAL;
+		gbc_btnRemoveCatalogs.gridx = 0;
+		gbc_btnRemoveCatalogs.gridy = 4;
+		panelTypeLists.add(btnRemoveCatalogs, gbc_btnRemoveCatalogs);
 
 		JPanel panelSkip = new JPanel();
 		splitPaneTargets.setRightComponent(panelSkip);
@@ -1605,6 +1620,10 @@ public class DeDup {
 				doEditTypeFiles();
 				break;
 
+			case BTN_REMOVE_CATALOGS:
+				doRemoveCatalogs();
+				break;
+
 			case PUM_UTILITY_SELECT:
 				doUtilityBulkSelection(mainTable, true);
 				break;
@@ -1687,6 +1706,7 @@ public class DeDup {
 	private final static String BTN_SKIP_REMOVE = "btnSkipRemove";
 	private final static String BTN_SKIP_CLEAR = "btnSkipClear";
 	private final static String BTN_EDIT_TYPEFILES = "btnEditTypeFiles";
+	private final static String BTN_REMOVE_CATALOGS = "btnRemoveCatalogs";
 
 	private final static String BTN_START = "btnStart";
 	private final static String BTN_PRINT_RESULTS = "btnPrintResults";
@@ -1943,9 +1963,11 @@ public class DeDup {
 				ois.close();
 				fis.close();
 			} catch (ClassNotFoundException cnfe) {
-				log.infof("Could not get Catalog class for : %s%n", catalogFile.getParentFile().toString());
+				// log.infof("Could not get Catalog class for : %s%n",
+				// catalogFile.getParentFile().toString());
 			} catch (FileNotFoundException fnfe) {
-				log.infof("Could not get catalog for : %s%n", catalogFile.getParentFile().toString());
+				// log.infof("Could not get catalog for : %s%n",
+				// catalogFile.getParentFile().toString());
 			} catch (IOException ioe) {
 				log.errorf("IOException reading %s%n%s%n", catalogFile.getParentFile().toString(), ioe.getMessage());
 			} // try
@@ -2020,18 +2042,18 @@ public class DeDup {
 			public void mousePressed(MouseEvent e) {
 				if (e.isPopupTrigger()) {
 					showMenu(e);
-				} // if popup Trigger
-			}
+				} // if Trigger
+			}// mousePressed
 
 			public void mouseReleased(MouseEvent e) {
 				if (e.isPopupTrigger()) {
 					showMenu(e);
-				}
-			}
+				} // if trigger
+			}// mouseReleased
 
 			private void showMenu(MouseEvent e) {
 				popup.show(e.getComponent(), e.getX(), e.getY());
-			}
+			}// showMenu
 		});
 	}// addPopup
 		// =========================================================//
