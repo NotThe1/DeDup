@@ -109,7 +109,7 @@ import appLogger.AppLogger;
 
 public class DeDup {
 
-	String title = "DeDup -   version 1.4";
+	String title = "DeDup -   version 1.5";
 
 	/* @formatter:off */
 	Image classImage = Toolkit.getDefaultToolkit().getImage(DeDup.class.getResource("/kcmkwm.png"));
@@ -735,7 +735,7 @@ public class DeDup {
 		if (files == null || files.length == 0) {
 			for (String file : INITIAL_LISTFILES) {
 				try {
-					InputStream inStream = this.getClass().getResourceAsStream(file);
+					InputStream inStream = this.getClass().getResourceAsStream("/" +file);
 					Path targetPath = Paths.get(appDataDirectory, file);
 					Files.copy(inStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
 				} catch (Exception e) {
