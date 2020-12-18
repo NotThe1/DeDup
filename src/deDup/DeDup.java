@@ -108,6 +108,10 @@ import appLogger.AppLogger;
  * except SourceForge\icons\png\128X128\kcmcwm.png
  */
 
+/*
+ * Freeze version written for Java 8
+ */
+
 public class DeDup {
 
 	String title = "DeDup -   version 1.5";
