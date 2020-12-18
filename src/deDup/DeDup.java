@@ -109,7 +109,7 @@ import appLogger.AppLogger;
  */
 
 /*
- * Freeze version written for Java 8
+ * Starting work with Java 11
  */
 
 public class DeDup {
